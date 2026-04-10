@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Sparkles, RefreshCw } from "lucide-react"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { RefreshCw, Sparkles } from "lucide-react"
+import { useEffect, useState } from "react"
 
 const motivationalQuotes = [
   {
@@ -65,12 +65,12 @@ export function QuotesCard() {
   }
 
   return (
-    <Card className="flex min-h-0 flex-col bg-gradient-to-br from-card to-muted/30">
-      <CardHeader className="pb-2">
+    <Card className="flex min-h-0 flex-col gap-4 bg-gradient-to-br from-card to-muted/20 py-5">
+      <CardHeader className="pb-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-full bg-chart-2/10">
-              <Sparkles className="size-4 text-chart-2" />
+            <div className="flex size-8 items-center justify-center rounded-full bg-muted">
+              <Sparkles className="size-4 text-muted-foreground" />
             </div>
             <span className="text-sm font-medium">Daily Inspiration</span>
           </div>
@@ -79,23 +79,22 @@ export function QuotesCard() {
             size="icon"
             onClick={refreshQuote}
             disabled={isRefreshing}
-            className="size-8"
+            className="size-8 text-muted-foreground"
           >
             <RefreshCw className={`size-4 ${isRefreshing ? "animate-spin" : ""}`} />
             <span className="sr-only">Refresh quote</span>
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col justify-center pt-2">
-        <div className={`space-y-3 transition-opacity duration-300 ${isRefreshing ? "opacity-0" : "opacity-100"}`}>
-          <p className="text-lg font-medium leading-relaxed text-balance">
+      <CardContent className="pt-0">
+        <div className={`space-y-2.5 transition-opacity duration-300 ${isRefreshing ? "opacity-0" : "opacity-100"}`}>
+          <p className="text-base font-medium leading-7 text-balance">
             &ldquo;{currentQuote.quote}&rdquo;
           </p>
-          <p className="text-sm text-muted-foreground">
-            — {currentQuote.author}
-          </p>
+          <p className="text-sm text-muted-foreground">- {currentQuote.author}</p>
         </div>
       </CardContent>
     </Card>
   )
 }
+

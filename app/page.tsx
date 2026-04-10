@@ -14,14 +14,13 @@ export default function DashboardPage() {
       </div>
       
       <CtaCard />
-      
-      <StatsCards />
-      
-      {/* Recent Sessions and Daily Motivation - responsive grid */}
-      <div className="grid flex-1 gap-6 lg:grid-cols-2">
-        {/* Recent Sessions first on mobile, second on large screens */}
+
+      <div className="grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <RecentSessionsCard />
-        <QuotesCard />
+        <div className="grid content-start gap-6">
+          <QuotesCard />
+          <StatsCards />
+        </div>
       </div>
     </div>
   )

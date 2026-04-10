@@ -1,6 +1,6 @@
 "use client"
 
-import { Zap, BookOpen, Play } from "lucide-react"
+import { BookOpen, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
@@ -40,10 +40,6 @@ export function CtaCard() {
               <Play className="mr-2 size-4" />
               Enter Focus Mode
             </Link>
-          </Button>
-          <Button variant="outline" className="bg-background/50">
-            <BookOpen className="mr-2 size-4" />
-            Resume Journal
           </Button>
         </div>
       </CardContent>
