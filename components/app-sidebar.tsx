@@ -171,8 +171,8 @@ export function AppSidebar() {
         {/* Session Panel - only shown on Log Session page when not in Zen mode */}
         {pathname === "/log-session" && !isZenMode && (
           <>
-            <SidebarSeparator className="mx-0" />
-            <SidebarGroup className="flex-1">
+            <SidebarSeparator className="mx-0 group-data-[collapsible=icon]:hidden" />
+            <SidebarGroup className="flex-1 group-data-[collapsible=icon]:hidden">
               <SidebarGroupContent className="h-full">
                 <SessionPanel />
               </SidebarGroupContent>

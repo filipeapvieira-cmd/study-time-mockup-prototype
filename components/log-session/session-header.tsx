@@ -4,18 +4,17 @@ import { Calendar, Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useZenMode } from "@/contexts/zen-mode-context"
 import { useSidebar } from "@/components/ui/sidebar"
-import { useEffect } from "react"
 
 export function SessionHeader() {
-  const { isZenMode, toggleZenMode } = useZenMode()
+  const { isZenMode, setZenMode } = useZenMode()
   const { setOpen } = useSidebar()
 
-  // Only collapse sidebar when entering zen mode, don't force open when exiting
-  useEffect(() => {
-    if (isZenMode) {
-      setOpen(false)
-    }
-  }, [isZenMode, setOpen])
+  const handleZenModeToggle = () => {
+    const nextIsZenMode = !isZenMode
+
+    setZenMode(nextIsZenMode)
+    setOpen(!nextIsZenMode)
+  }
 
   const today = new Date()
   const formattedDate = today.toLocaleDateString("en-US", {
@@ -34,7 +33,7 @@ export function SessionHeader() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={toggleZenMode}
+          onClick={handleZenModeToggle}
           className="gap-2 rounded-md text-muted-foreground hover:text-foreground"
         >
           {isZenMode ? (
