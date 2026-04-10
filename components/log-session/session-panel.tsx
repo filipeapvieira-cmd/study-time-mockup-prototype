@@ -22,35 +22,41 @@ interface Topic {
   title: string
   time: number
   isActive: boolean
+  isRunning: boolean
 }
 
+type SessionStatus = "stopped" | "playing" | "paused"
+
 export function SessionPanel() {
-  const [isRunning, setIsRunning] = useState(false)
+  const [sessionStatus, setSessionStatus] = useState<SessionStatus>("stopped")
   const [time, setTime] = useState(0)
   const [topics, setTopics] = useState<Topic[]>([
-    { id: "1", title: "Untitled", time: 0, isActive: true },
+    { id: "1", title: "Untitled", time: 0, isActive: true, isRunning: false },
   ])
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState("")
 
   const activeTopic = topics.find((t) => t.isActive)
+  const isSessionPlaying = sessionStatus === "playing"
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null
-    if (isRunning) {
+
+    if (isSessionPlaying) {
       interval = setInterval(() => {
         setTime((t) => t + 1)
         setTopics((prev) =>
           prev.map((topic) =>
-            topic.isActive ? { ...topic, time: topic.time + 1 } : topic
+            topic.isRunning ? { ...topic, time: topic.time + 1 } : topic
           )
         )
       }, 1000)
     }
+
     return () => {
       if (interval) clearInterval(interval)
     }
-  }, [isRunning])
+  }, [isSessionPlaying])
 
   const formatTime = useCallback((seconds: number) => {
     const hrs = Math.floor(seconds / 3600)
@@ -61,22 +67,52 @@ export function SessionPanel() {
       .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
   }, [])
 
-  const toggleTimer = () => setIsRunning(!isRunning)
+  const stopAllTopicTimers = useCallback(() => {
+    setTopics((prev) =>
+      prev.map((topic) =>
+        topic.isRunning ? { ...topic, isRunning: false } : topic
+      )
+    )
+  }, [])
+
+  const handleSessionPrimaryAction = () => {
+    if (sessionStatus === "playing") {
+      setSessionStatus("paused")
+      stopAllTopicTimers()
+      return
+    }
+
+    setSessionStatus("playing")
+  }
 
   const resetTimer = () => {
-    setIsRunning(false)
+    setSessionStatus("stopped")
     setTime(0)
     setTopics((prev) =>
-      prev.map((topic) => (topic.isActive ? { ...topic, time: 0 } : topic))
+      prev.map((topic) => ({ ...topic, time: 0, isRunning: false }))
     )
   }
 
   const stopSession = () => {
-    setIsRunning(false)
+    setSessionStatus("stopped")
+    stopAllTopicTimers()
   }
 
   const saveSession = () => {
-    setIsRunning(false)
+    setSessionStatus("stopped")
+    stopAllTopicTimers()
+  }
+
+  const toggleTopicTimer = (topicId: string) => {
+    if (sessionStatus !== "playing") return
+
+    setTopics((prev) =>
+      prev.map((topic) =>
+        topic.id === topicId
+          ? { ...topic, isRunning: !topic.isRunning }
+          : topic
+      )
+    )
   }
 
   const addTopic = () => {
@@ -85,6 +121,7 @@ export function SessionPanel() {
       title: `Topic ${topics.length + 1}`,
       time: 0,
       isActive: false,
+      isRunning: false,
     }
     setTopics((prev) => [...prev, newTopic])
   }
@@ -146,18 +183,22 @@ export function SessionPanel() {
                 {formatTime(time)}
               </div>
               <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                {isRunning ? "Recording" : "Ready"}
+                {sessionStatus === "playing"
+                  ? "Recording"
+                  : sessionStatus === "paused"
+                    ? "Paused"
+                    : "Ready"}
               </p>
             </div>
           </div>
 
           {/* Play/Pause Button */}
           <Button
-            onClick={toggleTimer}
-            variant={isRunning ? "secondary" : "default"}
-            className="h-10 w-full gap-2 rounded-md text-sm font-medium shadow-sm"
+            onClick={handleSessionPrimaryAction}
+            variant={isSessionPlaying ? "outline" : "default"}
+            className="h-9 w-full gap-2 rounded-md border-muted-foreground/40 text-sm font-medium shadow-sm"
           >
-            {isRunning ? (
+            {isSessionPlaying ? (
               <>
                 <Pause className="size-4" />
                 Pause
@@ -165,36 +206,36 @@ export function SessionPanel() {
             ) : (
               <>
                 <Play className="size-4" />
-                Start Session
+                {sessionStatus === "paused" ? "Resume Session" : "Start Session"}
               </>
             )}
           </Button>
 
           {/* Control Buttons */}
-          <div className="flex items-center justify-center gap-1">
+          <div className="flex items-center justify-center gap-2">
             <Button
-              variant="ghost"
-              size="icon"
+              variant="outline"
+              size="icon-sm"
               onClick={resetTimer}
-              className="size-8 rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="rounded-md border-muted-foreground/40 bg-background text-foreground shadow-xs transition-colors hover:bg-accent hover:text-foreground"
               title="Reset timer"
             >
               <RotateCcw className="size-4" />
             </Button>
             <Button
-              variant="ghost"
-              size="icon"
+              variant="outline"
+              size="icon-sm"
               onClick={stopSession}
-              className="size-8 rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="rounded-md border-muted-foreground/40 bg-background text-foreground shadow-xs transition-colors hover:bg-accent hover:text-foreground"
               title="Stop session"
             >
               <Square className="size-4" />
             </Button>
             <Button
-              variant="ghost"
-              size="icon"
+              variant="outline"
+              size="icon-sm"
               onClick={saveSession}
-              className="size-8 rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="rounded-md border-muted-foreground/40 bg-background text-foreground shadow-xs transition-colors hover:bg-accent hover:text-foreground"
               title="Save session"
             >
               <Save className="size-4" />
@@ -213,12 +254,12 @@ export function SessionPanel() {
         </SidebarGroupLabel>
         <SidebarGroupContent className="space-y-3">
           {/* Topic Selector Row */}
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <Select
               value={activeTopic?.id}
               onValueChange={(value) => setActiveTopic(value)}
             >
-              <SelectTrigger className="flex-1 rounded-md border-muted-foreground bg-background text-foreground shadow-xs">
+              <SelectTrigger className="min-w-0 flex-1 rounded-md border-muted-foreground bg-background text-foreground shadow-xs">
                 <SelectValue placeholder="Select topic" />
               </SelectTrigger>
               <SelectContent>
@@ -303,14 +344,27 @@ export function SessionPanel() {
                 )}
 
                 {/* Topic Timer Display */}
-                <div className="mt-3 flex items-center justify-between rounded-md border border-muted-foreground bg-muted px-3 py-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground">
-                    Time on topic
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => toggleTopicTimer(activeTopic.id)}
+                  disabled={!isSessionPlaying}
+                  className="mt-3 h-auto w-full justify-between rounded-md border-muted-foreground bg-muted px-3 py-2 text-foreground shadow-none hover:bg-background hover:text-foreground disabled:bg-muted disabled:text-foreground disabled:opacity-60"
+                  title={activeTopic.isRunning ? "Pause topic timer" : "Start topic timer"}
+                  aria-label={activeTopic.isRunning ? "Pause topic timer" : "Start topic timer"}
+                  aria-pressed={activeTopic.isRunning}
+                >
+                  <span className="flex items-center">
+                    {activeTopic.isRunning ? (
+                      <Pause className="size-4" />
+                    ) : (
+                      <Play className="size-4" />
+                    )}
                   </span>
                   <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
                     {formatTime(activeTopic.time)}
                   </span>
-                </div>
+                </Button>
               </div>
             </div>
           )}
