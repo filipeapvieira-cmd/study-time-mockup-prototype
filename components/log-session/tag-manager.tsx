@@ -261,6 +261,7 @@ interface TagManagerProps {
   hashtags: TagItem[]
   onSubjectsChange: (subjects: TagItem[]) => void
   onHashtagsChange: (hashtags: TagItem[]) => void
+  initialTab?: "subjects" | "hashtags"
 }
 
 export function TagManager({
@@ -268,8 +269,12 @@ export function TagManager({
   hashtags,
   onSubjectsChange,
   onHashtagsChange,
+  initialTab = "subjects",
 }: TagManagerProps) {
   const [open, setOpen] = React.useState(false)
+  const [activeTab, setActiveTab] = React.useState<"subjects" | "hashtags">(
+    initialTab
+  )
 
   const addSubject = (item: Omit<TagItem, "id">) => {
     onSubjectsChange([...subjects, { ...item, id: crypto.randomUUID() }])
@@ -295,8 +300,16 @@ export function TagManager({
     onHashtagsChange(hashtags.filter((h) => h.id !== id))
   }
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setActiveTab(initialTab)
+    }
+
+    setOpen(nextOpen)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon" className="size-8 shrink-0">
           <Settings className="size-4" />
@@ -310,7 +323,13 @@ export function TagManager({
             Add, edit, or remove subjects and hashtags with custom colors.
           </DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue="subjects" className="mt-2">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) =>
+            setActiveTab(value as "subjects" | "hashtags")
+          }
+          className="mt-2"
+        >
           <TabsList className="w-full">
             <TabsTrigger value="subjects" className="flex-1">
               Subjects

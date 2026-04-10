@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { Book, Hash, Check, ChevronDown, X, Sparkles } from "lucide-react"
+import { Book, Hash, Check, ChevronDown, X, MessageSquareText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { AIQuestionsSheet } from "@/components/log-session/ai-questions-sheet"
 import {
@@ -117,6 +117,7 @@ export default function LogSessionPage() {
                           hashtags={hashtags}
                           onSubjectsChange={setSubjects}
                           onHashtagsChange={setHashtags}
+                          initialTab="subjects"
                         />
                       </div>
                     </div>
@@ -183,6 +184,7 @@ export default function LogSessionPage() {
                           hashtags={hashtags}
                           onSubjectsChange={setSubjects}
                           onHashtagsChange={setHashtags}
+                          initialTab="hashtags"
                         />
                       </div>
                     </div>
@@ -270,12 +272,12 @@ export default function LogSessionPage() {
               {wordCount} {wordCount === 1 ? "word" : "words"}
             </span>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="gap-2 rounded-md text-muted-foreground hover:text-foreground"
+              className="gap-2 rounded-md border-border/80 bg-background text-foreground shadow-sm hover:bg-muted"
               onClick={() => setAiSheetOpen(true)}
             >
-              <Sparkles className="size-4" />
+              <MessageSquareText className="size-4" />
               <span className="hidden sm:inline">AI Prompts</span>
             </Button>
           </div>

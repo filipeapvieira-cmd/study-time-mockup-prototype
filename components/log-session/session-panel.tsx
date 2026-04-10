@@ -15,7 +15,6 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  useSidebar,
 } from "@/components/ui/sidebar"
 
 interface Topic {
@@ -26,7 +25,6 @@ interface Topic {
 }
 
 export function SessionPanel() {
-  const { open } = useSidebar()
   const [isRunning, setIsRunning] = useState(false)
   const [time, setTime] = useState(0)
   const [topics, setTopics] = useState<Topic[]>([
@@ -137,7 +135,7 @@ export function SessionPanel() {
     <div className="flex flex-col gap-2">
       {/* Session Timer Group */}
       <SidebarGroup className="px-3 py-2">
-        <SidebarGroupLabel className="mb-3 px-0 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 group-data-[collapsible=icon]:hidden">
+        <SidebarGroupLabel className="mb-3 px-0 text-[10px] font-semibold uppercase tracking-widest text-foreground group-data-[collapsible=icon]:hidden">
           Session Timer
         </SidebarGroupLabel>
         <SidebarGroupContent className="space-y-4">
@@ -210,7 +208,7 @@ export function SessionPanel() {
 
       {/* Topic Group */}
       <SidebarGroup className="flex-1 px-3 py-2">
-        <SidebarGroupLabel className="mb-3 px-0 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 group-data-[collapsible=icon]:hidden">
+        <SidebarGroupLabel className="mb-3 px-0 text-[10px] font-semibold uppercase tracking-widest text-foreground group-data-[collapsible=icon]:hidden">
           Topic
         </SidebarGroupLabel>
         <SidebarGroupContent className="space-y-3">
@@ -220,7 +218,7 @@ export function SessionPanel() {
               value={activeTopic?.id}
               onValueChange={(value) => setActiveTopic(value)}
             >
-              <SelectTrigger className="flex-1 rounded-md border-dashed">
+              <SelectTrigger className="flex-1 rounded-md border-muted-foreground bg-background text-foreground shadow-xs">
                 <SelectValue placeholder="Select topic" />
               </SelectTrigger>
               <SelectContent>
@@ -234,7 +232,7 @@ export function SessionPanel() {
             <Button
               variant="outline"
               size="icon"
-              className="shrink-0 rounded-md border-dashed"
+              className="shrink-0 rounded-md border-muted-foreground bg-background text-foreground shadow-xs hover:bg-accent"
               onClick={addTopic}
               title="Add new topic"
             >
@@ -244,7 +242,7 @@ export function SessionPanel() {
 
           {/* Selected Topic Card */}
           {activeTopic && (
-            <div className="overflow-hidden rounded-lg bg-muted">
+            <div className="overflow-hidden rounded-lg border border-muted-foreground bg-card shadow-xs">
               <div className="p-3">
                 {editingTopicId === activeTopic.id ? (
                   /* Editing Mode */
@@ -252,7 +250,7 @@ export function SessionPanel() {
                     <Input
                       value={editingTitle}
                       onChange={(e) => setEditingTitle(e.target.value)}
-                      className="h-8 flex-1 rounded-md text-sm"
+                      className="h-8 flex-1 rounded-md border-muted-foreground bg-background text-sm text-foreground shadow-xs"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === "Enter") saveTopicTitle()
@@ -263,7 +261,7 @@ export function SessionPanel() {
                       variant="ghost"
                       size="icon"
                       onClick={saveTopicTitle}
-                      className="size-7 shrink-0 rounded-md"
+                      className="size-7 shrink-0 rounded-md text-foreground hover:bg-accent"
                     >
                       <Check className="size-4 text-primary" />
                     </Button>
@@ -271,7 +269,7 @@ export function SessionPanel() {
                       variant="ghost"
                       size="icon"
                       onClick={cancelEditingTopic}
-                      className="size-7 shrink-0 rounded-md"
+                      className="size-7 shrink-0 rounded-md text-foreground hover:bg-accent"
                     >
                       <X className="size-4" />
                     </Button>
@@ -279,7 +277,7 @@ export function SessionPanel() {
                 ) : (
                   /* View Mode - Title Row */
                   <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-medium">
+                    <span className="truncate text-sm font-semibold text-foreground">
                       {activeTopic.title}
                     </span>
                     <div className="flex shrink-0 items-center gap-0.5">
@@ -287,7 +285,7 @@ export function SessionPanel() {
                         variant="ghost"
                         size="icon"
                         onClick={() => startEditingTopic(activeTopic)}
-                        className="size-7 rounded-md text-muted-foreground hover:text-foreground"
+                        className="size-7 rounded-md text-foreground hover:bg-accent hover:text-foreground"
                       >
                         <Pencil className="size-3.5" />
                       </Button>
@@ -296,7 +294,7 @@ export function SessionPanel() {
                         size="icon"
                         onClick={() => deleteTopic(activeTopic.id)}
                         disabled={topics.length === 1}
-                        className="size-7 rounded-md text-muted-foreground hover:text-destructive disabled:opacity-30"
+                        className="size-7 rounded-md text-foreground hover:bg-accent hover:text-destructive disabled:opacity-40"
                       >
                         <Trash2 className="size-3.5" />
                       </Button>
@@ -305,11 +303,11 @@ export function SessionPanel() {
                 )}
 
                 {/* Topic Timer Display */}
-                <div className="mt-3 flex items-center justify-between rounded-md bg-background/60 px-3 py-2">
-                  <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                <div className="mt-3 flex items-center justify-between rounded-md border border-muted-foreground bg-muted px-3 py-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground">
                     Time on topic
                   </span>
-                  <span className="font-mono text-sm font-semibold tabular-nums">
+                  <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
                     {formatTime(activeTopic.time)}
                   </span>
                 </div>

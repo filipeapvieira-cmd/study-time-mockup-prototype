@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { RefreshCw, Sparkles } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
 
 const motivationalQuotes = [
@@ -68,12 +68,7 @@ export function QuotesCard() {
     <Card className="flex min-h-0 flex-col gap-4 bg-gradient-to-br from-card to-muted/20 py-5">
       <CardHeader className="pb-0">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-full bg-muted">
-              <Sparkles className="size-4 text-muted-foreground" />
-            </div>
-            <span className="text-sm font-medium">Daily Inspiration</span>
-          </div>
+          <span className="text-sm font-medium">Daily Inspiration</span>
           <Button
             variant="ghost"
             size="icon"
