@@ -24,6 +24,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { TagManager, type TagItem } from "@/components/log-session/tag-manager";
 
@@ -67,6 +73,7 @@ export default function LogSessionPage() {
   const [subjectOpen, setSubjectOpen] = React.useState(false);
   const [selectedSubject, setSelectedSubject] = React.useState("");
   const [hashtagsOpen, setHashtagsOpen] = React.useState(false);
+  const [hashtagsHoverOpen, setHashtagsHoverOpen] = React.useState(false);
   const [selectedHashtags, setSelectedHashtags] = React.useState<string[]>([]);
   const [content, setContent] = React.useState("");
 
@@ -87,6 +94,39 @@ export default function LogSessionPage() {
   const removeHashtag = (value: string) => {
     setSelectedHashtags((current) => current.filter((item) => item !== value));
   };
+
+  const hasSelectedHashtags = selectedHashtags.length > 0;
+
+  const handleHashtagsOpenChange = (open: boolean) => {
+    setHashtagsOpen(open);
+
+    if (open) {
+      setHashtagsHoverOpen(false);
+    }
+  };
+
+  const hashtagsSelectButton = (
+    <Button
+      variant="outline"
+      role="combobox"
+      aria-expanded={hashtagsOpen}
+      className="h-10 w-full justify-between rounded-md border-muted-foreground bg-background font-normal text-foreground shadow-sm transition-shadow hover:bg-background hover:shadow-md"
+    >
+      <div className="flex items-center gap-2.5">
+        <Hash className="size-4 shrink-0 text-muted-foreground" />
+        <span
+          className={
+            hasSelectedHashtags ? "" : "text-muted-foreground"
+          }
+        >
+          {hasSelectedHashtags
+            ? `${selectedHashtags.length} tag${selectedHashtags.length > 1 ? "s" : ""} selected`
+            : "Add tags..."}
+        </span>
+      </div>
+      <ChevronDown className="ml-2 size-4 shrink-0 opacity-40" />
+    </Button>
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -191,115 +231,176 @@ export default function LogSessionPage() {
 
             {/* Hashtags Selector */}
             <div>
-              <Popover open={hashtagsOpen} onOpenChange={setHashtagsOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={hashtagsOpen}
-                    className="h-10 w-full justify-between rounded-md border-muted-foreground bg-background font-normal text-foreground shadow-sm transition-shadow hover:bg-background hover:shadow-md"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Hash className="size-4 shrink-0 text-muted-foreground" />
-                      <span
-                        className={
-                          selectedHashtags.length > 0
-                            ? ""
-                            : "text-muted-foreground"
-                        }
+              {hasSelectedHashtags ? (
+                <HoverCard
+                  open={
+                    hasSelectedHashtags && !hashtagsOpen && hashtagsHoverOpen
+                  }
+                  onOpenChange={(open) =>
+                    setHashtagsHoverOpen(
+                      open && hasSelectedHashtags && !hashtagsOpen,
+                    )
+                  }
+                  openDelay={120}
+                  closeDelay={100}
+                >
+                  <HoverCardTrigger asChild>
+                    <div className="w-full">
+                      <Popover
+                        open={hashtagsOpen}
+                        onOpenChange={handleHashtagsOpenChange}
                       >
-                        {selectedHashtags.length > 0
-                          ? `${selectedHashtags.length} tag${selectedHashtags.length > 1 ? "s" : ""} selected`
-                          : "Add tags..."}
-                      </span>
+                        <PopoverTrigger asChild>
+                          {hashtagsSelectButton}
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                          <Command>
+                            <div className="flex items-center border-b">
+                              <CommandInput
+                                placeholder="Search tags..."
+                                className="flex-1"
+                              />
+                              <div className="pr-1">
+                                <TagManager
+                                  subjects={subjects}
+                                  hashtags={hashtags}
+                                  onSubjectsChange={setSubjects}
+                                  onHashtagsChange={setHashtags}
+                                  initialTab="hashtags"
+                                />
+                              </div>
+                            </div>
+                            <CommandList>
+                              <CommandEmpty>No tag found.</CommandEmpty>
+                              <CommandGroup>
+                                {hashtags.map((hashtag) => (
+                                  <CommandItem
+                                    key={hashtag.id}
+                                    value={hashtag.value}
+                                    onSelect={() => toggleHashtag(hashtag.value)}
+                                  >
+                                    <div
+                                      className="mr-2 size-2.5 shrink-0 rounded-full"
+                                      style={{ backgroundColor: hashtag.color }}
+                                    />
+                                    <Check
+                                      className={cn(
+                                        "mr-2 size-4",
+                                        selectedHashtags.includes(hashtag.value)
+                                          ? "opacity-100"
+                                          : "opacity-0",
+                                      )}
+                                    />
+                                    {hashtag.label}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
-                    <ChevronDown className="ml-2 size-4 shrink-0 opacity-40" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <div className="flex items-center border-b">
-                      <CommandInput
-                        placeholder="Search tags..."
-                        className="flex-1"
-                      />
-                      <div className="pr-1">
-                        <TagManager
-                          subjects={subjects}
-                          hashtags={hashtags}
-                          onSubjectsChange={setSubjects}
-                          onHashtagsChange={setHashtags}
-                          initialTab="hashtags"
-                        />
+                  </HoverCardTrigger>
+                  <HoverCardContent
+                    align="start"
+                    className="w-72 max-w-[calc(100vw-2rem)]"
+                  >
+                    <div className="flex flex-col gap-3">
+                      <p className="text-sm font-medium text-foreground">
+                        Selected hashtags
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedHashtags.map((tagValue) => {
+                          const tag = hashtags.find((h) => h.value === tagValue);
+                          const label = tag?.label || `#${tagValue}`;
+
+                          return (
+                            <Badge
+                              key={tagValue}
+                              variant="outline"
+                              className="gap-1.5 border-transparent pr-1 shadow-none"
+                              style={{
+                                backgroundColor: tag?.color
+                                  ? `${tag.color}15`
+                                  : undefined,
+                                color: tag?.color,
+                              }}
+                            >
+                              <span className="truncate">{label}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  removeHashtag(tagValue);
+                                }}
+                                className="rounded-full p-0.5 transition-colors hover:bg-foreground/10"
+                                aria-label={`Remove ${label}`}
+                              >
+                                <X className="size-3" />
+                              </button>
+                            </Badge>
+                          );
+                        })}
                       </div>
                     </div>
-                    <CommandList>
-                      <CommandEmpty>No tag found.</CommandEmpty>
-                      <CommandGroup>
-                        {hashtags.map((hashtag) => (
-                          <CommandItem
-                            key={hashtag.id}
-                            value={hashtag.value}
-                            onSelect={() => toggleHashtag(hashtag.value)}
-                          >
-                            <div
-                              className="mr-2 size-2.5 shrink-0 rounded-full"
-                              style={{ backgroundColor: hashtag.color }}
-                            />
-                            <Check
-                              className={cn(
-                                "mr-2 size-4",
-                                selectedHashtags.includes(hashtag.value)
-                                  ? "opacity-100"
-                                  : "opacity-0",
-                              )}
-                            />
-                            {hashtag.label}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                  </HoverCardContent>
+                </HoverCard>
+              ) : (
+                <Popover
+                  open={hashtagsOpen}
+                  onOpenChange={handleHashtagsOpenChange}
+                >
+                  <PopoverTrigger asChild>{hashtagsSelectButton}</PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <div className="flex items-center border-b">
+                        <CommandInput
+                          placeholder="Search tags..."
+                          className="flex-1"
+                        />
+                        <div className="pr-1">
+                          <TagManager
+                            subjects={subjects}
+                            hashtags={hashtags}
+                            onSubjectsChange={setSubjects}
+                            onHashtagsChange={setHashtags}
+                            initialTab="hashtags"
+                          />
+                        </div>
+                      </div>
+                      <CommandList>
+                        <CommandEmpty>No tag found.</CommandEmpty>
+                        <CommandGroup>
+                          {hashtags.map((hashtag) => (
+                            <CommandItem
+                              key={hashtag.id}
+                              value={hashtag.value}
+                              onSelect={() => toggleHashtag(hashtag.value)}
+                            >
+                              <div
+                                className="mr-2 size-2.5 shrink-0 rounded-full"
+                                style={{ backgroundColor: hashtag.color }}
+                              />
+                              <Check
+                                className={cn(
+                                  "mr-2 size-4",
+                                  selectedHashtags.includes(hashtag.value)
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              {hashtag.label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
             </div>
           </div>
-
-          {/* Selected Hashtags Pills */}
-          {selectedHashtags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {selectedHashtags.map((tagValue) => {
-                const tag = hashtags.find((h) => h.value === tagValue);
-                return (
-                  <span
-                    key={tagValue}
-                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
-                    style={{
-                      backgroundColor: tag?.color
-                        ? `${tag.color}15`
-                        : undefined,
-                      color: tag?.color,
-                    }}
-                  >
-                    {tag?.label || `#${tagValue}`}
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => removeHashtag(tagValue)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          removeHashtag(tagValue);
-                        }
-                      }}
-                      className="cursor-pointer rounded-full p-0.5 transition-colors hover:bg-black/10"
-                    >
-                      <X className="size-3" />
-                    </span>
-                  </span>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         {/* Writing Area */}
