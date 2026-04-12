@@ -4,7 +4,6 @@ import React from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { format, isToday, isYesterday, parseISO } from "date-fns"
 import {
-  SlidersHorizontal,
   Calendar as CalendarIcon,
   Download,
   Loader2,
@@ -385,28 +384,25 @@ export default function SessionHistoryPage() {
       <div className="flex flex-1 flex-col gap-8 p-4 md:p-6">
         {/* Toolbar */}
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="size-4 shrink-0" />
-            <div className="relative w-full sm:w-[200px]">
-              <Input
-                placeholder="Filter..."
-                value={filterValue}
-                onChange={(e) => setFilterValue(e.target.value)}
-                className={`w-full text-sm font-medium placeholder:font-normal ${isKeywordFilterActive ? "pr-9" : ""}`}
-              />
-              {isKeywordFilterActive ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-1/2 right-1 size-7 -translate-y-1/2"
-                  onClick={() => setFilterValue("")}
-                  aria-label="Clear keyword filter"
-                >
-                  <X className="size-4" />
-                </Button>
-              ) : null}
-            </div>
+          <div className="relative w-full sm:w-[300px]">
+            <Input
+              placeholder="Filter..."
+              value={filterValue}
+              onChange={(e) => setFilterValue(e.target.value)}
+              className={`w-full text-sm font-medium placeholder:font-normal ${isKeywordFilterActive ? "pr-9" : ""}`}
+            />
+            {isKeywordFilterActive ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute top-1/2 right-1 size-7 -translate-y-1/2"
+                onClick={() => setFilterValue("")}
+                aria-label="Clear keyword filter"
+              >
+                <X className="size-4" />
+              </Button>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {/* Mobile View Toggle */}
