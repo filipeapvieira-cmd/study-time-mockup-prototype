@@ -1,32 +1,31 @@
-"use client"
-
-import { BookOpen, Play } from "lucide-react"
+import { Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { mockUserFirstName } from "@/lib/mock-user"
+import Image from "next/image"
 import Link from "next/link"
 
 export function CtaCard() {
   return (
-    <Card className="overflow-hidden border-0 bg-gradient-to-br from-secondary via-accent to-muted">
-      <CardContent className="relative flex flex-col gap-4 py-8 px-6 md:py-10 md:px-8">
-        {/* Decorative circles */}
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden md:flex items-center justify-center">
-          <div className="size-28 rounded-full border border-border/50 flex items-center justify-center">
-            <div className="size-20 rounded-full border border-border/50 flex items-center justify-center">
-              <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <BookOpen className="size-5 text-primary" />
-              </div>
-            </div>
-          </div>
+    <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-secondary via-accent to-muted py-0">
+      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 overflow-hidden md:block [mask-image:linear-gradient(to_right,transparent_0,black_16px,black_100%)]">
+        <div className="absolute inset-0 overflow-hidden">
+        <Image
+          src="/images/dashboard/study-desk.avif"
+          alt="A calm study desk with books and warm light."
+          fill
+          priority
+          sizes="(max-width: 767px) 0px, 50vw"
+          className="scale-105 object-cover [object-position:24%_center] opacity-100 saturate-160 contrast-120 brightness-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-secondary/4 to-secondary/16" />
         </div>
+      </div>
 
-        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          <span className="size-1.5 rounded-full bg-chart-2" />
-          Continue Learning
-        </div>
-        
+      <CardContent className="relative z-10 flex flex-col gap-4 px-6 py-8 md:px-8 md:py-10 md:pr-[44%] lg:pr-[46%]">
+
         <h2 className="text-2xl font-bold tracking-tight text-balance md:text-3xl max-w-sm">
-          Welcome back, Scholar
+          Welcome back, {mockUserFirstName}
         </h2>
         
         <p className="text-muted-foreground max-w-md">

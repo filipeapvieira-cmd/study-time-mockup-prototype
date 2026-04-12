@@ -1,8 +1,7 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { RefreshCw } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Sun } from "lucide-react"
 import { useEffect, useState } from "react"
 
 const motivationalQuotes = [
@@ -45,49 +44,23 @@ const motivationalQuotes = [
 
 export function QuotesCard() {
   const [currentQuote, setCurrentQuote] = useState(motivationalQuotes[0])
-  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     const randomIndex = Math.floor(Math.random() * motivationalQuotes.length)
     setCurrentQuote(motivationalQuotes[randomIndex])
   }, [])
 
-  const refreshQuote = () => {
-    setIsRefreshing(true)
-    setTimeout(() => {
-      let randomIndex = Math.floor(Math.random() * motivationalQuotes.length)
-      while (motivationalQuotes[randomIndex].quote === currentQuote.quote) {
-        randomIndex = Math.floor(Math.random() * motivationalQuotes.length)
-      }
-      setCurrentQuote(motivationalQuotes[randomIndex])
-      setIsRefreshing(false)
-    }, 300)
-  }
-
   return (
-    <Card className="flex min-h-0 flex-col gap-4 bg-gradient-to-br from-card to-muted/20 py-5">
-      <CardHeader className="pb-0">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Daily Inspiration</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={refreshQuote}
-            disabled={isRefreshing}
-            className="size-8 text-muted-foreground"
-          >
-            <RefreshCw className={`size-4 ${isRefreshing ? "animate-spin" : ""}`} />
-            <span className="sr-only">Refresh quote</span>
-          </Button>
-        </div>
+    <Card className="h-full flex min-h-0 flex-col gap-3 py-5">
+      <CardHeader className="flex flex-row items-center justify-between pb-0">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          Daily Inspiration
+        </CardTitle>
+        <Sun className="size-4 text-muted-foreground" />
       </CardHeader>
       <CardContent className="pt-0">
-        <div className={`space-y-2.5 transition-opacity duration-300 ${isRefreshing ? "opacity-0" : "opacity-100"}`}>
-          <p className="text-base font-medium leading-7 text-balance">
-            &ldquo;{currentQuote.quote}&rdquo;
-          </p>
-          <p className="text-sm text-muted-foreground">- {currentQuote.author}</p>
-        </div>
+        <p className="text-sm leading-6 text-balance">&ldquo;{currentQuote.quote}&rdquo;</p>
+        <p className="mt-1 text-xs text-muted-foreground">- {currentQuote.author}</p>
       </CardContent>
     </Card>
   )

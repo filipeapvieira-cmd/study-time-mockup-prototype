@@ -17,19 +17,13 @@ const stats = [
     description: "Keep it up!",
     icon: Flame,
   },
-  {
-    title: "Focus Score",
-    value: "87%",
-    description: "Above average",
-    icon: TrendingUp,
-  },
 ]
 
 export function StatsCards({ className }: { className?: string }) {
   return (
     <div className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-1", className)}>
       {stats.map((stat) => (
-        <Card key={stat.title} className="gap-3 py-5">
+        <Card key={stat.title} className="h-full gap-3 py-5">
           <CardHeader className="flex flex-row items-center justify-between pb-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {stat.title}

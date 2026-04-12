@@ -15,11 +15,11 @@ export default function DashboardPage() {
       
       <CtaCard />
 
-      <div className="grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <RecentSessionsCard />
-        <div className="grid content-start gap-6">
+        <div className="grid gap-6 lg:grid-rows-3">
           <QuotesCard />
-          <StatsCards />
+          <StatsCards className="gap-6 lg:row-span-2 lg:grid-rows-2" />
         </div>
       </div>
     </div>
