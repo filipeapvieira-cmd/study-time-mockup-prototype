@@ -16,7 +16,6 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-import { useZenMode } from "@/contexts/zen-mode-context"
 import { mockUser, mockUserInitials } from "@/lib/mock-user"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -70,7 +69,6 @@ const navItems = [
 export function AppSidebar() {
   const pathname = usePathname()
   const { isMobile, open, toggleSidebar } = useSidebar()
-  const { isZenMode } = useZenMode()
   const [isHovered, setIsHovered] = useState(false)
 
   return (
@@ -169,8 +167,8 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Session Panel - only shown on Log Session page when not in Zen mode */}
-        {pathname === "/log-session" && !isZenMode && (
+        {/* Session Panel - only shown on Log Session page */}
+        {pathname === "/log-session" && (
           <>
             <SidebarSeparator className="mx-0 group-data-[collapsible=icon]:hidden" />
             <SidebarGroup className="flex-1 group-data-[collapsible=icon]:hidden">
