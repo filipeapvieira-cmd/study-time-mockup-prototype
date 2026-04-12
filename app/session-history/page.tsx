@@ -4,6 +4,18 @@ import React from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { format, isToday, isYesterday, parseISO } from "date-fns"
 import {
+  type ColumnDef,
+  type FilterFn,
+  type PaginationState,
+  type SortingState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table"
+import {
   Calendar as CalendarIcon,
   Download,
   Loader2,
@@ -52,7 +64,8 @@ import {
 } from "@/lib/session-history-route-state"
 import type { StudySession } from "@/types/session"
 
-// Helper function to format duration
+const MIN_KEYWORD_FILTER_LENGTH = 2
+
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
@@ -60,7 +73,6 @@ function formatDuration(seconds: number): string {
   return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
 }
 
-// Helper function to format duration in human readable format (e.g., "1h 36m")
 function formatDurationHuman(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
@@ -70,7 +82,6 @@ function formatDurationHuman(seconds: number): string {
   return `${minutes}m`
 }
 
-// Helper function to format date group header
 function formatDateHeader(dateStr: string): string {
   const date = parseISO(dateStr)
   if (isToday(date)) return "TODAY"
@@ -78,7 +89,6 @@ function formatDateHeader(dateStr: string): string {
   return format(date, "EEEE, MMMM d").toUpperCase()
 }
 
-// Group sessions by date
 function groupSessionsByDate(sessions: StudySession[]): Record<string, StudySession[]> {
   return sessions.reduce((groups, session) => {
     const date = session.date
@@ -100,18 +110,22 @@ function cloneStudySessions(sessions: StudySession[]): StudySession[] {
   }))
 }
 
-function sessionMatchesKeyword(session: StudySession, keyword: string): boolean {
-  return session.topics.some((topic) => {
-    if (topic.subjectLabel.toLowerCase().includes(keyword)) {
-      return true
-    }
+const sessionGlobalFilterFn: FilterFn<StudySession> = (
+  row,
+  columnId,
+  filterValue
+) => {
+  if (typeof filterValue !== "string") {
+    return true
+  }
 
-    if (topic.reflection.toLowerCase().includes(keyword)) {
-      return true
-    }
+  const keyword = filterValue.trim().toLowerCase()
+  if (!keyword || keyword.length < MIN_KEYWORD_FILTER_LENGTH) {
+    return true
+  }
 
-    return topic.hashtags.some((hashtag) => hashtag.toLowerCase().includes(keyword))
-  })
+  const searchableText = String(row.getValue(columnId)).toLowerCase()
+  return searchableText.includes(keyword)
 }
 
 export default function SessionHistoryPage() {
@@ -123,8 +137,15 @@ export default function SessionHistoryPage() {
     cloneStudySessions(TEMP_STUDY_SESSIONS)
   )
   const [filterValue, setFilterValue] = React.useState("")
-  const [rowsPerPage, setRowsPerPage] = React.useState("10")
-  const [currentPage, setCurrentPage] = React.useState(1)
+  const [appliedFilterValue, setAppliedFilterValue] = React.useState("")
+  const [isFilterTransitionPending, startFilterTransition] = React.useTransition()
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: "date", desc: true },
+  ])
+  const [pagination, setPagination] = React.useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
   const [viewMode, setViewMode] = React.useState<"compact" | "expanded">("compact")
   const [isExporting, setIsExporting] = React.useState(false)
   const [dateRange, setDateRange] = React.useState<{
@@ -135,25 +156,39 @@ export default function SessionHistoryPage() {
     to: undefined,
   })
 
-  const keywordFilterDisplayValue = React.useMemo(() => filterValue.trim(), [filterValue])
+  const keywordInputDisplayValue = React.useMemo(() => filterValue.trim(), [filterValue])
+  const keywordFilterDisplayValue = React.useMemo(
+    () => appliedFilterValue.trim(),
+    [appliedFilterValue]
+  )
   const normalizedKeyword = React.useMemo(
     () => keywordFilterDisplayValue.toLowerCase(),
     [keywordFilterDisplayValue]
   )
-  const isKeywordFilterActive = normalizedKeyword.length > 0
+  const hasKeywordInput = keywordInputDisplayValue.length > 0
+  const isKeywordFilterActive =
+    normalizedKeyword.length >= MIN_KEYWORD_FILTER_LENGTH
+  const showKeywordTrailingControl = hasKeywordInput || isFilterTransitionPending
   const isDateFilterActive = Boolean(dateRange.from || dateRange.to)
   const hasActiveFilters = isKeywordFilterActive || isDateFilterActive
-  const filteredSessions = React.useMemo(() => {
+
+  const handleFilterInputChange = React.useCallback(
+    (nextValue: string) => {
+      setFilterValue(nextValue)
+      startFilterTransition(() => {
+        setAppliedFilterValue(nextValue)
+      })
+    },
+    [startFilterTransition]
+  )
+
+  const dateFilteredSessions = React.useMemo(() => {
     const dateFrom = dateRange.from ?? dateRange.to
     const dateTo = dateRange.to ?? dateRange.from
     const normalizedFrom = dateFrom ? format(dateFrom, "yyyy-MM-dd") : null
     const normalizedTo = dateTo ? format(dateTo, "yyyy-MM-dd") : null
 
     return sessions.filter((session) => {
-      if (isKeywordFilterActive && !sessionMatchesKeyword(session, normalizedKeyword)) {
-        return false
-      }
-
       if (normalizedFrom && session.date < normalizedFrom) {
         return false
       }
@@ -164,10 +199,95 @@ export default function SessionHistoryPage() {
 
       return true
     })
-  }, [dateRange.from, dateRange.to, isKeywordFilterActive, normalizedKeyword, sessions])
-  const rowsPerPageValue = Number.parseInt(rowsPerPage, 10)
+  }, [dateRange.from, dateRange.to, sessions])
+
+  const columns = React.useMemo<ColumnDef<StudySession>[]>(
+    () => [
+      {
+        id: "subject",
+        accessorFn: (session) =>
+          session.topics
+            .map((topic) => `${topic.subjectLabel} ${topic.reflection} ${topic.hashtags.join(" ")}`)
+            .join(" "),
+        header: "Subject",
+        enableSorting: false,
+        enableGlobalFilter: true,
+        cell: ({ row }) => (
+          <div className="flex flex-col gap-1">
+            {row.original.topics.map((topic) => (
+              <div key={topic.id} className="flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="h-4 w-1 shrink-0 rounded-full"
+                  style={{ backgroundColor: topic.subjectColor }}
+                />
+                <span className="text-sm font-medium leading-tight">{topic.subjectLabel}</span>
+              </div>
+            ))}
+          </div>
+        ),
+      },
+      {
+        id: "date",
+        accessorKey: "date",
+        header: ({ column }) => (
+          <Button
+            type="button"
+            variant="ghost"
+            className="gap-1 p-0 hover:bg-transparent"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Date
+            <ArrowUpDown className="size-4" />
+          </Button>
+        ),
+        cell: ({ row }) => row.original.date,
+        enableGlobalFilter: false,
+      },
+      {
+        id: "effectiveTime",
+        accessorKey: "effectiveTime",
+        header: ({ column }) => (
+          <Button
+            type="button"
+            variant="ghost"
+            className="ml-auto gap-1 p-0 hover:bg-transparent"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            <span className="hidden sm:inline">Session </span>Duration
+            <ArrowUpDown className="size-4" />
+          </Button>
+        ),
+        cell: ({ row }) => formatDuration(row.original.effectiveTime),
+        enableGlobalFilter: false,
+      },
+    ],
+    []
+  )
+
+  const table = useReactTable({
+    data: dateFilteredSessions,
+    columns,
+    state: {
+      sorting,
+      globalFilter: isKeywordFilterActive ? normalizedKeyword : "",
+      pagination,
+    },
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    globalFilterFn: sessionGlobalFilterFn,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  })
+
+  const filteredSessions = table.getFilteredRowModel().rows.map((row) => row.original)
+  const paginatedSessions = table.getRowModel().rows.map((row) => row.original)
   const totalRows = filteredSessions.length
-  const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPageValue))
+  const totalPages = Math.max(1, table.getPageCount())
+  const currentPage = Math.min(table.getState().pagination.pageIndex + 1, totalPages)
+
   const routeEditorState = React.useMemo(
     () => parseSessionHistoryEditorRouteState(searchParams),
     [searchParams]
@@ -197,15 +317,11 @@ export default function SessionHistoryPage() {
     return queryString ? `${pathname}?${queryString}` : pathname
   }, [pathname, searchParams])
 
-  // Group sessions by date for expanded view
   const groupedSessions = React.useMemo(
-    () => groupSessionsByDate(filteredSessions),
-    [filteredSessions]
+    () => groupSessionsByDate(paginatedSessions),
+    [paginatedSessions]
   )
-  const sortedDates = React.useMemo(
-    () => Object.keys(groupedSessions).sort((a, b) => b.localeCompare(a)),
-    [groupedSessions]
-  )
+  const sortedDates = React.useMemo(() => Object.keys(groupedSessions), [groupedSessions])
 
   const replaceRoute = React.useCallback(
     (nextHref: string) => {
@@ -238,10 +354,6 @@ export default function SessionHistoryPage() {
       })
     )
   }, [pathname, replaceRoute, searchParams])
-
-  React.useEffect(() => {
-    setCurrentPage((previousPage) => Math.min(previousPage, totalPages))
-  }, [totalPages])
 
   React.useEffect(() => {
     const { sessionId, topicId } = routeEditorState
@@ -357,7 +469,6 @@ export default function SessionHistoryPage() {
 
   return (
     <div className="flex min-h-full flex-col gap-6 p-4 md:p-6">
-      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Session History</h1>
@@ -365,7 +476,6 @@ export default function SessionHistoryPage() {
             Detailed log of your intellectual growth and focus sessions.
           </p>
         </div>
-        {/* View Toggle */}
         <ToggleGroup
           type="single"
           value={viewMode}
@@ -382,22 +492,26 @@ export default function SessionHistoryPage() {
       </div>
 
       <div className="flex flex-1 flex-col gap-8 p-4 md:p-6">
-        {/* Toolbar */}
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="relative w-full sm:w-[300px]">
             <Input
               placeholder="Filter..."
               value={filterValue}
-              onChange={(e) => setFilterValue(e.target.value)}
-              className={`w-full text-sm font-medium placeholder:font-normal ${isKeywordFilterActive ? "pr-9" : ""}`}
+              onChange={(event) => handleFilterInputChange(event.target.value)}
+              className={`w-full text-sm font-medium placeholder:font-normal ${showKeywordTrailingControl ? "pr-9" : ""}`}
             />
-            {isKeywordFilterActive ? (
+            {isFilterTransitionPending ? (
+              <Loader2
+                className="text-muted-foreground absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin"
+                aria-hidden="true"
+              />
+            ) : hasKeywordInput ? (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="absolute top-1/2 right-1 size-7 -translate-y-1/2"
-                onClick={() => setFilterValue("")}
+                onClick={() => handleFilterInputChange("")}
                 aria-label="Clear keyword filter"
               >
                 <X className="size-4" />
@@ -405,7 +519,6 @@ export default function SessionHistoryPage() {
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {/* Mobile View Toggle */}
             <ToggleGroup
               type="single"
               value={viewMode}
@@ -482,161 +595,175 @@ export default function SessionHistoryPage() {
           </div>
         </div>
 
-        {/* Content - Table or Cards */}
         {viewMode === "compact" ? (
-          /* Compact Table View */
           <div className="flex-1 overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[200px]">Subject</TableHead>
-                  <TableHead className="min-w-[100px]">
-                    <Button variant="ghost" className="gap-1 p-0 hover:bg-transparent">
-                      Date
-                      <ArrowUpDown className="size-4" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="min-w-[120px] text-right">
-                    <Button variant="ghost" className="gap-1 p-0 hover:bg-transparent">
-                      <span className="hidden sm:inline">Session </span>Duration
-                      <ArrowUpDown className="size-4" />
-                    </Button>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSessions.map((session) => (
-                  <TableRow
-                    key={session.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleRowClick(session)}
-                  >
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {session.topics.map((topic) => (
-                          <div key={topic.id} className="flex items-center gap-2">
-                            <span
-                              aria-hidden="true"
-                              className="h-4 w-1 shrink-0 rounded-full"
-                              style={{ backgroundColor: topic.subjectColor }}
-                            />
-                            <span className="text-sm font-medium leading-tight">
-                              {topic.subjectLabel}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">{session.date}</TableCell>
-                    <TableCell className="whitespace-nowrap text-right font-mono">
-                      {formatDuration(session.effectiveTime)}
-                    </TableCell>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const headerClassName =
+                        header.column.id === "subject"
+                          ? "min-w-[200px]"
+                          : header.column.id === "date"
+                            ? "min-w-[100px]"
+                            : header.column.id === "effectiveTime"
+                              ? "min-w-[120px] text-right"
+                              : undefined
+
+                      return (
+                        <TableHead key={header.id} className={headerClassName}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      )
+                    })}
                   </TableRow>
                 ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.length > 0 ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      className="cursor-pointer"
+                      onClick={() => handleRowClick(row.original)}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const cellClassName =
+                          cell.column.id === "date"
+                            ? "whitespace-nowrap"
+                            : cell.column.id === "effectiveTime"
+                              ? "whitespace-nowrap text-right font-mono"
+                              : undefined
+
+                        return (
+                          <TableCell key={cell.id} className={cellClassName}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        )
+                      })}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                      No sessions found.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
         ) : (
-          /* Expanded View */
           <div className="flex flex-1 flex-col gap-6">
-            {sortedDates.map((date) => (
-              <div key={date}>
-                {/* Date Group Header */}
-                <div className="mb-3 flex items-center gap-3">
-                  <span className="text-xs font-semibold tracking-wider text-muted-foreground">
-                    {formatDateHeader(date)}
-                  </span>
-                  <div className="h-px flex-1 bg-border" />
-                </div>
-                
-                {/* Sessions for this date */}
-                <div className="flex flex-col gap-3">
-                  {groupedSessions[date].map((session) => {
-                    return (
-                      <div
-                        key={session.id}
-                        className="group cursor-pointer rounded-lg border bg-card p-4 transition-all hover:shadow-md"
-                        onClick={() => handleRowClick(session)}
-                      >
-                        <div className="flex gap-4">
-                          {/* Left side - Time and Duration */}
-                          <div className="flex shrink-0 flex-col items-start gap-1 text-muted-foreground">
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="size-3.5" />
-                              <span className="text-sm font-medium text-foreground">
-                                {session.startTime}
+            {sortedDates.length > 0 ? (
+              sortedDates.map((date) => (
+                <div key={date}>
+                  <div className="mb-3 flex items-center gap-3">
+                    <span className="text-xs font-semibold tracking-wider text-muted-foreground">
+                      {formatDateHeader(date)}
+                    </span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    {groupedSessions[date].map((session) => {
+                      return (
+                        <div
+                          key={session.id}
+                          className="group cursor-pointer rounded-lg border bg-card p-4 transition-all hover:shadow-md"
+                          onClick={() => handleRowClick(session)}
+                        >
+                          <div className="flex gap-4">
+                            <div className="flex shrink-0 flex-col items-start gap-1 text-muted-foreground">
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="size-3.5" />
+                                <span className="text-sm font-medium text-foreground">
+                                  {session.startTime}
+                                </span>
+                              </div>
+                              <span className="text-xs">
+                                {formatDurationHuman(session.effectiveTime)}
                               </span>
                             </div>
-                            <span className="text-xs">
-                              {formatDurationHuman(session.effectiveTime)}
-                            </span>
-                          </div>
 
-                          {/* Right side - Topic list */}
-                          <div className="flex min-w-0 flex-1 flex-col gap-3">
-                            {session.topics.map((topic) => (
-                              <div
-                                key={topic.id}
-                                className="cursor-pointer rounded-lg border bg-card p-4 transition-all"
-                                style={{ borderLeftWidth: "4px", borderLeftColor: topic.subjectColor }}
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  handleRowClick(session, topic.id)
-                                }}
-                              >
-                                <div className="mb-2 flex items-center justify-between gap-3">
-                                  <span className="font-medium text-foreground">
-                                    {topic.subjectLabel}
-                                  </span>
-                                  <span className="text-xs font-mono text-muted-foreground">
-                                    {formatDurationHuman(topic.duration)}
-                                  </span>
-                                </div>
-
-                                {topic.hashtags.length > 0 ? (
-                                  <div className="mb-2 flex flex-wrap gap-2">
-                                    {topic.hashtags.map((tag) => (
-                                      <span
-                                        key={tag}
-                                        className="text-sm text-muted-foreground"
-                                      >
-                                        #{tag}
-                                      </span>
-                                    ))}
+                            <div className="flex min-w-0 flex-1 flex-col gap-3">
+                              {session.topics.map((topic) => (
+                                <div
+                                  key={topic.id}
+                                  className="cursor-pointer rounded-lg border bg-card p-4 transition-all"
+                                  style={{
+                                    borderLeftWidth: "4px",
+                                    borderLeftColor: topic.subjectColor,
+                                  }}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    handleRowClick(session, topic.id)
+                                  }}
+                                >
+                                  <div className="mb-2 flex items-center justify-between gap-3">
+                                    <span className="font-medium text-foreground">
+                                      {topic.subjectLabel}
+                                    </span>
+                                    <span className="text-xs font-mono text-muted-foreground">
+                                      {formatDurationHuman(topic.duration)}
+                                    </span>
                                   </div>
-                                ) : null}
 
-                                {topic.reflection ? (
-                                  <p className="text-sm text-foreground/80">
-                                    {topic.reflection}
-                                  </p>
-                                ) : (
-                                  <p className="text-sm italic text-muted-foreground">
-                                    No reflection logged for this topic.
-                                  </p>
-                                )}
-                              </div>
-                            ))}
+                                  {topic.hashtags.length > 0 ? (
+                                    <div className="mb-2 flex flex-wrap gap-2">
+                                      {topic.hashtags.map((tag) => (
+                                        <span
+                                          key={tag}
+                                          className="text-sm text-muted-foreground"
+                                        >
+                                          #{tag}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : null}
+
+                                  {topic.reflection ? (
+                                    <p className="text-sm text-foreground/80">
+                                      {topic.reflection}
+                                    </p>
+                                  ) : (
+                                    <p className="text-sm italic text-muted-foreground">
+                                      No reflection logged for this topic.
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+                No sessions found.
               </div>
-            ))}
+            )}
           </div>
         )}
 
-        {/* Footer */}
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            {totalRows} row(s) total.
-          </p>
+          <p className="text-sm text-muted-foreground">{totalRows} row(s) total.</p>
           <div className="flex flex-wrap items-center gap-3 text-sm font-medium sm:gap-4">
             <div className="flex items-center gap-2">
               <span className="whitespace-nowrap">Rows per page</span>
-              <Select value={rowsPerPage} onValueChange={setRowsPerPage}>
+              <Select
+                value={String(table.getState().pagination.pageSize)}
+                onValueChange={(value) => table.setPageSize(Number.parseInt(value, 10))}
+              >
                 <SelectTrigger className="w-[70px] font-medium">
                   <SelectValue />
                 </SelectTrigger>
@@ -656,8 +783,8 @@ export default function SessionHistoryPage() {
                 variant="outline"
                 size="icon"
                 className="size-8 shrink-0 sm:size-9"
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
+                onClick={() => table.firstPage()}
+                disabled={!table.getCanPreviousPage()}
               >
                 <ChevronsLeft className="size-4 shrink-0" />
               </Button>
@@ -665,8 +792,8 @@ export default function SessionHistoryPage() {
                 variant="outline"
                 size="icon"
                 className="size-8 shrink-0 sm:size-9"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
               >
                 <ChevronLeft className="size-4 shrink-0" />
               </Button>
@@ -674,8 +801,8 @@ export default function SessionHistoryPage() {
                 variant="outline"
                 size="icon"
                 className="size-8 shrink-0 sm:size-9"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
               >
                 <ChevronRight className="size-4 shrink-0" />
               </Button>
@@ -683,8 +810,8 @@ export default function SessionHistoryPage() {
                 variant="outline"
                 size="icon"
                 className="size-8 shrink-0 sm:size-9"
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
+                onClick={() => table.lastPage()}
+                disabled={!table.getCanNextPage()}
               >
                 <ChevronsRight className="size-4 shrink-0" />
               </Button>
@@ -693,7 +820,6 @@ export default function SessionHistoryPage() {
         </div>
       </div>
 
-      {/* Session Editor Sheet */}
       <SessionEditorSheet
         session={selectedSession}
         initialTopicId={initialTopicId}
