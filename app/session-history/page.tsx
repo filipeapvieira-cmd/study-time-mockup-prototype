@@ -19,8 +19,6 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -42,7 +40,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { Checkbox } from "@/components/ui/checkbox"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { SessionEditorSheet } from "@/components/session-history/session-editor-sheet"
 import type { StudySession } from "@/types/session"
@@ -274,7 +271,6 @@ function groupSessionsByDate(sessions: StudySession[]): Record<string, StudySess
 
 export default function SessionHistoryPage() {
   const [sessions, setSessions] = React.useState<StudySession[]>(sampleSessions)
-  const [selectedRows, setSelectedRows] = React.useState<string[]>([])
   const [filterValue, setFilterValue] = React.useState("")
   const [rowsPerPage, setRowsPerPage] = React.useState("10")
   const [currentPage, setCurrentPage] = React.useState(1)
@@ -300,20 +296,6 @@ export default function SessionHistoryPage() {
     () => Object.keys(groupedSessions).sort((a, b) => b.localeCompare(a)),
     [groupedSessions]
   )
-
-  const toggleRow = (id: string) => {
-    setSelectedRows((prev) =>
-      prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]
-    )
-  }
-
-  const toggleAllRows = () => {
-    if (selectedRows.length === sessions.length) {
-      setSelectedRows([])
-    } else {
-      setSelectedRows(sessions.map((s) => s.id))
-    }
-  }
 
   const handleRowClick = (session: StudySession) => {
     setSelectedSession(session)
@@ -360,286 +342,248 @@ export default function SessionHistoryPage() {
         </ToggleGroup>
       </div>
 
-      {/* Card containing toolbar, table/cards, and pagination */}
-      <Card className="flex-1">
-        <CardContent className="flex flex-col gap-4 p-4 md:p-6">
-          {/* Toolbar */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal className="size-4 shrink-0 text-muted-foreground" />
-              <Input
-                placeholder="Filter..."
-                value={filterValue}
-                onChange={(e) => setFilterValue(e.target.value)}
-                className="w-full sm:w-[200px]"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Mobile View Toggle */}
-              <ToggleGroup
-                type="single"
-                value={viewMode}
-                onValueChange={(value) => value && setViewMode(value as "compact" | "expanded")}
-                className="sm:hidden"
-              >
-                <ToggleGroupItem value="compact" aria-label="Compact view" size="sm">
-                  <List className="size-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="expanded" aria-label="Expanded view" size="sm">
-                  <LayoutGrid className="size-4" />
-                </ToggleGroupItem>
-              </ToggleGroup>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="flex-1 gap-2 sm:flex-none">
-                    <CalendarIcon className="size-4 shrink-0" />
-                    <span className="truncate">
-                      {dateRange.from && dateRange.to ? (
-                        <>
-                          {format(dateRange.from, "MMM dd, yyyy")} -{" "}
-                          {format(dateRange.to, "MMM dd, yyyy")}
-                        </>
-                      ) : (
-                        "Select date range"
-                      )}
-                    </span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="range"
-                    selected={dateRange}
-                    onSelect={(range) =>
-                      setDateRange({ from: range?.from, to: range?.to })
-                    }
-                    numberOfMonths={1}
-                  />
-                </PopoverContent>
-              </Popover>
-              <Button variant="ghost" size="icon" className="shrink-0">
-                <Filter className="size-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="shrink-0">
-                <Download className="size-4" />
-              </Button>
-            </div>
+      <div className="flex flex-1 flex-col gap-8 p-4 md:p-6">
+        {/* Toolbar */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="size-4 shrink-0" />
+            <Input
+              placeholder="Filter..."
+              value={filterValue}
+              onChange={(e) => setFilterValue(e.target.value)}
+              className="w-full text-sm font-medium placeholder:font-normal sm:w-[200px]"
+            />
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Mobile View Toggle */}
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(value) => value && setViewMode(value as "compact" | "expanded")}
+              className="sm:hidden"
+            >
+              <ToggleGroupItem value="compact" aria-label="Compact view" size="sm">
+                <List className="size-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="expanded" aria-label="Expanded view" size="sm">
+                <LayoutGrid className="size-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="flex-1 gap-2 sm:flex-none">
+                  <CalendarIcon className="size-4 shrink-0" />
+                  <span className="truncate">
+                    {dateRange.from && dateRange.to ? (
+                      <>
+                        {format(dateRange.from, "MMM dd, yyyy")} -{" "}
+                        {format(dateRange.to, "MMM dd, yyyy")}
+                      </>
+                    ) : (
+                      "Select date range"
+                    )}
+                  </span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={(range) =>
+                    setDateRange({ from: range?.from, to: range?.to })
+                  }
+                  numberOfMonths={1}
+                />
+              </PopoverContent>
+            </Popover>
+            <Button variant="ghost" size="icon" className="shrink-0">
+              <Filter className="size-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="shrink-0">
+              <Download className="size-4" />
+            </Button>
+          </div>
+        </div>
 
-          {/* Content - Table or Cards */}
-          {viewMode === "compact" ? (
-            /* Compact Table View */
-            <div className="flex-1 overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[40px]">
-                      <Checkbox
-                        checked={selectedRows.length === sessions.length}
-                        onCheckedChange={toggleAllRows}
-                      />
-                    </TableHead>
-                    <TableHead className="min-w-[200px]">Content</TableHead>
-                    <TableHead className="hidden sm:table-cell">
-                      <Button variant="ghost" className="gap-1 p-0 hover:bg-transparent">
-                        Feelings
-                        <ArrowUpDown className="size-4" />
-                      </Button>
-                    </TableHead>
-                    <TableHead className="min-w-[100px]">
-                      <Button variant="ghost" className="gap-1 p-0 hover:bg-transparent">
-                        Date
-                        <ArrowUpDown className="size-4" />
-                      </Button>
-                    </TableHead>
-                    <TableHead className="min-w-[120px] text-right">
-                      <Button variant="ghost" className="gap-1 p-0 hover:bg-transparent">
-                        <span className="hidden sm:inline">Session </span>Duration
-                        <ArrowUpDown className="size-4" />
-                      </Button>
-                    </TableHead>
+        {/* Content - Table or Cards */}
+        {viewMode === "compact" ? (
+          /* Compact Table View */
+          <div className="flex-1 overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[200px]">Subject</TableHead>
+                  <TableHead className="min-w-[100px]">
+                    <Button variant="ghost" className="gap-1 p-0 hover:bg-transparent">
+                      Date
+                      <ArrowUpDown className="size-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="min-w-[120px] text-right">
+                    <Button variant="ghost" className="gap-1 p-0 hover:bg-transparent">
+                      <span className="hidden sm:inline">Session </span>Duration
+                      <ArrowUpDown className="size-4" />
+                    </Button>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sessions.map((session) => (
+                  <TableRow
+                    key={session.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleRowClick(session)}
+                  >
+                    <TableCell className="whitespace-nowrap">{session.subjectLabel}</TableCell>
+                    <TableCell className="whitespace-nowrap">{session.date}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right font-mono">
+                      {formatDuration(session.effectiveTime)}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sessions.map((session) => (
-                    <TableRow
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          /* Expanded View */
+          <div className="flex flex-1 flex-col gap-6">
+            {sortedDates.map((date) => (
+              <div key={date}>
+                {/* Date Group Header */}
+                <div className="mb-3 flex items-center gap-3">
+                  <span className="text-xs font-semibold tracking-wider text-muted-foreground">
+                    {formatDateHeader(date)}
+                  </span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                
+                {/* Sessions for this date */}
+                <div className="flex flex-col gap-3">
+                  {groupedSessions[date].map((session) => (
+                    <div
                       key={session.id}
-                      data-state={selectedRows.includes(session.id) ? "selected" : undefined}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={(e) => {
-                        // Don't open editor if clicking checkbox
-                        if ((e.target as HTMLElement).closest('[role="checkbox"]')) return
-                        handleRowClick(session)
-                      }}
+                      className="group cursor-pointer rounded-lg border bg-card p-4 transition-all hover:shadow-md"
+                      style={{ borderLeftWidth: "4px", borderLeftColor: session.subjectColor }}
+                      onClick={() => handleRowClick(session)}
                     >
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedRows.includes(session.id)}
-                          onCheckedChange={() => toggleRow(session.id)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="whitespace-nowrap">
-                          {session.subjectLabel}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">{session.feelings}</TableCell>
-                      <TableCell className="whitespace-nowrap">{session.date}</TableCell>
-                      <TableCell className="whitespace-nowrap text-right font-mono">
-                        {formatDuration(session.effectiveTime)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            /* Expanded Card View */
-            <div className="flex-1 space-y-6">
-              {sortedDates.map((date) => (
-                <div key={date}>
-                  {/* Date Group Header */}
-                  <div className="mb-3 flex items-center gap-3">
-                    <span className="text-xs font-semibold tracking-wider text-muted-foreground">
-                      {formatDateHeader(date)}
-                    </span>
-                    <div className="h-px flex-1 bg-border" />
-                  </div>
-                  
-                  {/* Sessions for this date */}
-                  <div className="space-y-3">
-                    {groupedSessions[date].map((session) => (
-                      <div
-                        key={session.id}
-                        className="group cursor-pointer rounded-lg border bg-card p-4 transition-all hover:shadow-md"
-                        style={{ borderLeftWidth: "4px", borderLeftColor: session.subjectColor }}
-                        onClick={() => handleRowClick(session)}
-                      >
-                        <div className="flex gap-4">
-                          {/* Left side - Time and Duration */}
-                          <div className="flex shrink-0 flex-col items-start gap-1 text-muted-foreground">
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="size-3.5" />
-                              <span className="text-sm font-medium text-foreground">
-                                {session.startTime}
-                              </span>
-                            </div>
-                            <span className="text-xs">
-                              {formatDurationHuman(session.effectiveTime)}
+                      <div className="flex gap-4">
+                        {/* Left side - Time and Duration */}
+                        <div className="flex shrink-0 flex-col items-start gap-1 text-muted-foreground">
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="size-3.5" />
+                            <span className="text-sm font-medium text-foreground">
+                              {session.startTime}
                             </span>
                           </div>
-                          
-                          {/* Right side - Content */}
-                          <div className="min-w-0 flex-1">
-                            {/* Subject and Hashtags */}
-                            <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <span className="text-xs">
+                            {formatDurationHuman(session.effectiveTime)}
+                          </span>
+                        </div>
+
+                        {/* Right side - Subject */}
+                        <div className="min-w-0 flex-1">
+                          {/* Subject and Hashtags */}
+                          <div className="mb-1 flex flex-wrap items-center gap-2">
+                            <span
+                              className="font-medium"
+                              style={{ color: session.subjectColor }}
+                            >
+                              {session.subjectLabel}
+                            </span>
+                            {session.hashtags.map((tag) => (
                               <span
-                                className="font-medium"
-                                style={{ color: session.subjectColor }}
+                                key={tag}
+                                className="text-sm text-muted-foreground"
                               >
-                                {session.subjectLabel}
+                                #{tag}
                               </span>
-                              {session.hashtags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="text-sm text-muted-foreground"
-                                >
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
-                            
-                            {/* Reflection */}
-                            {session.reflection ? (
-                              <p className="mb-2 text-sm text-foreground/80">
-                                {session.reflection}
-                              </p>
-                            ) : (
-                              <p className="mb-2 text-sm italic text-muted-foreground">
-                                No reflection logged for this session.
-                              </p>
-                            )}
-                            
-                            {/* Feelings Badge */}
-                            {session.feelings && (
-                              <Badge variant="secondary" className="text-xs">
-                                {session.feelings}
-                              </Badge>
-                            )}
+                            ))}
                           </div>
+
+                          {/* Reflection */}
+                          {session.reflection ? (
+                            <p className="mb-2 text-sm text-foreground/80">
+                              {session.reflection}
+                            </p>
+                          ) : (
+                            <p className="mb-2 text-sm italic text-muted-foreground">
+                              No reflection logged for this session.
+                            </p>
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            ))}
+          </div>
+        )}
 
-          {/* Footer */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">
-              {selectedRows.length} of {totalRows} row(s) selected.
-            </p>
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm whitespace-nowrap">Rows per page</span>
-                <Select value={rowsPerPage} onValueChange={setRowsPerPage}>
-                  <SelectTrigger className="w-[70px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <span className="text-sm whitespace-nowrap">
-                Page {currentPage} of {totalPages}
-              </span>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="size-8 sm:size-9"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronsLeft className="size-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="size-8 sm:size-9"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="size-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="size-8 sm:size-9"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  <ChevronRight className="size-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="size-8 sm:size-9"
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                >
-                  <ChevronsRight className="size-4" />
-                </Button>
-              </div>
+        {/* Footer */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            {totalRows} row(s) total.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 text-sm font-medium sm:gap-4">
+            <div className="flex items-center gap-2">
+              <span className="whitespace-nowrap">Rows per page</span>
+              <Select value={rowsPerPage} onValueChange={setRowsPerPage}>
+                <SelectTrigger className="w-[70px] font-medium">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <span className="whitespace-nowrap">
+              Page {currentPage} of {totalPages}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-8 shrink-0 sm:size-9"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronsLeft className="size-4 shrink-0" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-8 shrink-0 sm:size-9"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="size-4 shrink-0" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-8 shrink-0 sm:size-9"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="size-4 shrink-0" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-8 shrink-0 sm:size-9"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronsRight className="size-4 shrink-0" />
+              </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Session Editor Sheet */}
       <SessionEditorSheet
