@@ -79,9 +79,9 @@ export function SubjectSelect({
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
-          <div className="flex items-center border-b">
+          <div className="flex items-center">
             <CommandInput placeholder="Search subject..." className="flex-1" />
-            <div className="pr-1">
+            <div className="flex h-9 items-center border-b pr-1">
               <TagManager
                 subjects={subjects}
                 hashtags={hashtags}
