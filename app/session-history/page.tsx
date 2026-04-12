@@ -680,7 +680,7 @@ export default function SessionHistoryPage() {
                           onClick={() => handleRowClick(session)}
                         >
                           <div className="flex gap-4">
-                            <div className="flex shrink-0 flex-col items-start gap-1 text-muted-foreground">
+                            <div className="flex shrink-0 flex-col items-center gap-1 text-center text-muted-foreground">
                               <div className="flex items-center gap-1.5">
                                 <Clock className="size-3.5" />
                                 <span className="text-sm font-medium text-foreground">
@@ -729,11 +729,11 @@ export default function SessionHistoryPage() {
                                   ) : null}
 
                                   {topic.reflection ? (
-                                    <p className="text-sm text-foreground/80">
+                                    <p className="overflow-hidden text-sm text-foreground/80 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:10]">
                                       {topic.reflection}
                                     </p>
                                   ) : (
-                                    <p className="text-sm italic text-muted-foreground">
+                                    <p className="overflow-hidden text-sm italic text-muted-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:10]">
                                       No reflection logged for this topic.
                                     </p>
                                   )}
