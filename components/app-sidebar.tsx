@@ -46,7 +46,7 @@ import { SessionPanel } from "@/components/log-session/session-panel"
 const navItems = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/dashboard",
     icon: LayoutDashboard,
   },
   {
@@ -79,7 +79,7 @@ export function AppSidebar() {
             {/* Mobile: show full brand header without collapse button */}
             {isMobile && (
               <SidebarMenuButton size="lg" asChild>
-                <Link href="/">
+                <Link href="/dashboard">
                   <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                     <GraduationCap className="size-4" />
                   </div>
@@ -97,7 +97,7 @@ export function AppSidebar() {
             {!isMobile && open && (
               <div className="flex items-center gap-2">
                 <SidebarMenuButton size="lg" asChild className="flex-1">
-                  <Link href="/">
+                  <Link href="/dashboard">
                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                       <GraduationCap className="size-4" />
                     </div>
