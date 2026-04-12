@@ -51,10 +51,26 @@ export interface BuildSessionHistoryPdfResult {
 }
 
 const COLORS = {
-  heading: [24, 24, 27] as const,
-  muted: [82, 82, 91] as const,
-  line: [228, 228, 231] as const,
-  metricBackground: [250, 250, 252] as const,
+  heading: [17, 24, 39] as const,
+  muted: [75, 85, 99] as const,
+  line: [209, 213, 219] as const,
+  surface: [245, 245, 245] as const,
+}
+
+/**
+ * Tailwind spacing token reference:
+ * - `space-y-2` = 0.5rem = 8px.
+ * This PDF renderer uses mm units, so we convert once and enforce it as
+ * the minimum vertical spacing between distinct blocks/items.
+ */
+const TW_SPACE_Y_2_PX = 8
+const MM_PER_PX = 25.4 / 96
+const MIN_ITEM_SPACING_MM = TW_SPACE_Y_2_PX * MM_PER_PX
+const DOUBLE_ITEM_SPACING_MM = MIN_ITEM_SPACING_MM * 2
+const TEXT_ASCENDER_COMPENSATION_MM = 3
+
+function withMinItemSpacing(valueMm: number): number {
+  return Math.max(valueMm, MIN_ITEM_SPACING_MM)
 }
 
 function formatDuration(seconds: number): string {
@@ -127,15 +143,23 @@ function formatFilterSummary(filter: SessionHistoryPdfExportInput["filter"]): st
   return summaryParts.length > 0 ? summaryParts.join(" | ") : "All sessions"
 }
 
-function estimateTopicBlockHeight(
+function buildTopicRenderData(
   doc: JsPdfDocument,
   session: StudySession,
   topicIndex: number,
   maxWidth: number
-): number {
+): {
+  hashtagsLines: string[]
+  reflectionLines: string[]
+  blockHeight: number
+} {
   const topic = session.topics[topicIndex]
   if (!topic) {
-    return 0
+    return {
+      hashtagsLines: [],
+      reflectionLines: [],
+      blockHeight: 0,
+    }
   }
 
   const hashtagsText =
@@ -144,13 +168,20 @@ function estimateTopicBlockHeight(
       : "No hashtags"
   const reflectionText =
     topic.reflection.trim().length > 0
-      ? `Reflection: ${topic.reflection.trim()}`
-      : "Reflection: No reflection logged for this topic."
+      ? topic.reflection.trim()
+      : "No reflection logged for this topic."
 
   const hashtagsLines = doc.splitTextToSize(hashtagsText, maxWidth)
   const reflectionLines = doc.splitTextToSize(reflectionText, maxWidth)
 
-  return 5 + hashtagsLines.length * 4.2 + reflectionLines.length * 4.2 + 2.5
+  const blockHeight =
+    4.8 + Math.max(hashtagsLines.length, 1) * 4 + Math.max(reflectionLines.length, 1) * 4 + 4
+
+  return {
+    hashtagsLines,
+    reflectionLines,
+    blockHeight,
+  }
 }
 
 export function calculateSessionHistoryPdfAnalytics(
@@ -197,53 +228,90 @@ export function buildSessionHistoryPdf(
   const analytics = calculateSessionHistoryPdfAnalytics(input.sessions)
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
-  const marginX = 16
-  const marginTop = 18
-  const marginBottom = 16
+  const marginX = 14
+  const marginTop = 14
+  const marginBottom = 10
+  const footerReserve = 8
   const contentWidth = pageWidth - marginX * 2
   let cursorY = marginTop
+  const contentBottom = pageHeight - marginBottom - footerReserve
+  const exportScopeLabel = input.filter.hasActiveFilters
+    ? "Filtered Export"
+    : "All Sessions Export"
 
   const ensureSpace = (requiredHeight: number) => {
-    if (cursorY + requiredHeight <= pageHeight - marginBottom) {
+    if (cursorY + requiredHeight <= contentBottom) {
       return
     }
 
     doc.addPage()
-    cursorY = marginTop
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(10)
+    doc.setTextColor(...COLORS.heading)
+    doc.text("Session History Report", marginX, marginTop + 1.5)
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(8.5)
+    doc.setTextColor(...COLORS.muted)
+    doc.text("Continued", pageWidth - marginX, marginTop + 1.5, {
+      align: "right",
+    })
+    doc.setDrawColor(...COLORS.line)
+    const continuationDividerY = marginTop + 4
+    doc.line(marginX, continuationDividerY, pageWidth - marginX, continuationDividerY)
+    cursorY =
+      continuationDividerY + DOUBLE_ITEM_SPACING_MM + TEXT_ASCENDER_COMPENSATION_MM
   }
 
-  const writeSectionHeading = (title: string) => {
-    ensureSpace(8)
+  const writeSectionHeading = (
+    title: string,
+    options?: { showInlineDivider?: boolean }
+  ) => {
+    const showInlineDivider = options?.showInlineDivider ?? true
+    cursorY += MIN_ITEM_SPACING_MM
+    ensureSpace(withMinItemSpacing(8.5))
     doc.setFont("helvetica", "bold")
-    doc.setFontSize(12)
+    doc.setFontSize(11.5)
     doc.setTextColor(...COLORS.heading)
     doc.text(title, marginX, cursorY)
-    cursorY += 6
+    const lineStartX = marginX + doc.getTextWidth(title) + 3
+    if (showInlineDivider && lineStartX < pageWidth - marginX) {
+      doc.setDrawColor(...COLORS.line)
+      doc.line(lineStartX, cursorY - 0.5, pageWidth - marginX, cursorY - 0.5)
+    }
+    cursorY += 5.5
   }
 
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(18)
+  doc.setFontSize(17)
   doc.setTextColor(...COLORS.heading)
-  doc.text("Session History Report", marginX, cursorY)
-  cursorY += 7
-
+  doc.text("Session History Report", marginX, cursorY + 6)
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(10)
+  doc.setFontSize(9.5)
   doc.setTextColor(...COLORS.muted)
-  doc.text(`Generated: ${formatGeneratedTimestamp(input.generatedAt)}`, marginX, cursorY)
-  cursorY += 4.5
+  const generatedTextBaselineY = cursorY + 11
+  doc.text(
+    `Generated ${formatGeneratedTimestamp(input.generatedAt)}`,
+    marginX,
+    generatedTextBaselineY
+  )
+  doc.setFontSize(8.5)
+  doc.text(exportScopeLabel, pageWidth - marginX, generatedTextBaselineY, {
+    align: "right",
+  })
+  cursorY =
+    generatedTextBaselineY + MIN_ITEM_SPACING_MM + TEXT_ASCENDER_COMPENSATION_MM
 
-  doc.setDrawColor(...COLORS.line)
-  doc.line(marginX, cursorY + 1, pageWidth - marginX, cursorY + 1)
-  cursorY += 7
-
-  writeSectionHeading("Applied Filters")
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(10)
-  doc.setTextColor(...COLORS.muted)
-  const filterLines = doc.splitTextToSize(formatFilterSummary(input.filter), contentWidth)
-  doc.text(filterLines, marginX, cursorY)
-  cursorY += filterLines.length * 4.5 + 3
+  if (input.filter.hasActiveFilters) {
+    writeSectionHeading("Applied Filters")
+    const filterSummary = formatFilterSummary(input.filter)
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(9.8)
+    doc.setTextColor(...COLORS.muted)
+    const filterLines = doc.splitTextToSize(filterSummary, contentWidth)
+    ensureSpace(filterLines.length * 4.2 + withMinItemSpacing(2))
+    doc.text(filterLines, marginX, cursorY)
+    cursorY += filterLines.length * 4.2 + withMinItemSpacing(2)
+  }
 
   writeSectionHeading("Analytics Summary")
   const metricRows = [
@@ -256,82 +324,94 @@ export function buildSessionHistoryPdf(
     { label: "Unique subjects", value: String(analytics.uniqueSubjects) },
     { label: "Total topics", value: String(analytics.totalTopics) },
   ]
+  const metricGap = withMinItemSpacing(3)
+  const metricCardHeight = 15
+  const metricCardHalfWidth = (contentWidth - metricGap) / 2
 
-  for (const metric of metricRows) {
-    ensureSpace(8)
-    doc.setFillColor(...COLORS.metricBackground)
+  for (let index = 0; index < metricRows.length; index += 1) {
+    const metric = metricRows[index]
+    const isLastMetric = index === metricRows.length - 1
+    const isSingleCardRow = isLastMetric && index % 2 === 0
+    const isLeftColumn = index % 2 === 0
+    const cardWidth = isSingleCardRow ? contentWidth : metricCardHalfWidth
+    const cardX = isSingleCardRow
+      ? marginX
+      : marginX + (isLeftColumn ? 0 : metricCardHalfWidth + metricGap)
+
+    if (isLeftColumn || isSingleCardRow) {
+      ensureSpace(metricCardHeight + metricGap)
+    }
+
+    doc.setFillColor(...COLORS.surface)
     doc.setDrawColor(...COLORS.line)
-    doc.rect(marginX, cursorY - 4, contentWidth, 7, "FD")
-
-    doc.setFont("helvetica", "bold")
-    doc.setFontSize(9.5)
-    doc.setTextColor(...COLORS.heading)
-    doc.text(metric.label, marginX + 2, cursorY)
+    doc.roundedRect(cardX, cursorY, cardWidth, metricCardHeight, 1.5, 1.5, "FD")
 
     doc.setFont("helvetica", "normal")
+    doc.setFontSize(8.3)
     doc.setTextColor(...COLORS.muted)
-    doc.text(metric.value, pageWidth - marginX - 2, cursorY, { align: "right" })
-
-    cursorY += 8
-  }
-
-  cursorY += 1
-  writeSectionHeading("Session Details")
-
-  for (const [sessionIndex, session] of input.sessions.entries()) {
-    const firstTopicHeight = estimateTopicBlockHeight(doc, session, 0, contentWidth - 6)
-    ensureSpace(13 + firstTopicHeight)
+    doc.text(metric.label.toUpperCase(), cardX + 3, cursorY + 5)
 
     doc.setFont("helvetica", "bold")
     doc.setFontSize(11)
+    doc.setTextColor(...COLORS.heading)
+    doc.text(metric.value, cardX + 3, cursorY + 11)
+
+    if (!isSingleCardRow && !isLeftColumn && index < metricRows.length) {
+      cursorY += metricCardHeight + metricGap
+    } else if (isSingleCardRow) {
+      cursorY += metricCardHeight + metricGap
+    } else if (!isSingleCardRow && isLastMetric) {
+      cursorY += metricCardHeight + metricGap
+    }
+  }
+
+  cursorY += withMinItemSpacing(1.5)
+  writeSectionHeading("Session Details")
+  cursorY += MIN_ITEM_SPACING_MM
+
+  for (const [sessionIndex, session] of input.sessions.entries()) {
+    ensureSpace(10 + withMinItemSpacing(1))
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(10.6)
     doc.setTextColor(...COLORS.heading)
     doc.text(
       `Session ${sessionIndex + 1} - ${formatDateLabel(session.date)}`,
       marginX,
       cursorY
     )
-    cursorY += 4.8
-
     doc.setFont("helvetica", "normal")
-    doc.setFontSize(9.5)
+    doc.setFontSize(8.7)
     doc.setTextColor(...COLORS.muted)
     doc.text(
       `${session.startTime} - ${session.endTime} | Effective: ${formatDuration(
         session.effectiveTime
       )} | Pause: ${formatDuration(session.pauseTime)}`,
       marginX,
-      cursorY
+      cursorY + 4.2
     )
-    cursorY += 5
+    cursorY += 4.2 + withMinItemSpacing(4)
 
     if (session.topics.length === 0) {
-      ensureSpace(8)
+      ensureSpace(7.5)
       doc.setFont("helvetica", "italic")
       doc.setTextColor(...COLORS.muted)
-      doc.text("No topics were recorded for this session.", marginX + 2, cursorY)
-      cursorY += 6
+      doc.text("No topics were recorded for this session.", marginX + 2, cursorY + 0.5)
+      cursorY += withMinItemSpacing(7)
     }
 
     for (const [topicIndex, topic] of session.topics.entries()) {
-      const topicMaxWidth = contentWidth - 6
-      const hashtagsText =
-        topic.hashtags.length > 0
-          ? topic.hashtags.map((tag) => `#${tag}`).join(" ")
-          : "No hashtags"
-      const reflectionText =
-        topic.reflection.trim().length > 0
-          ? `Reflection: ${topic.reflection.trim()}`
-          : "Reflection: No reflection logged for this topic."
-
-      const hashtagsLines = doc.splitTextToSize(hashtagsText, topicMaxWidth)
-      const reflectionLines = doc.splitTextToSize(reflectionText, topicMaxWidth)
-      const topicBlockHeight =
-        5 + hashtagsLines.length * 4.2 + reflectionLines.length * 4.2 + 2.5
-
-      ensureSpace(topicBlockHeight + 1)
+      const topicContentWidth = contentWidth - 10
+      const topicRenderData = buildTopicRenderData(
+        doc,
+        session,
+        topicIndex,
+        topicContentWidth - 2
+      )
+      const topicBlockHeight = Math.max(topicRenderData.blockHeight, 13)
+      ensureSpace(topicBlockHeight + withMinItemSpacing(2.5))
 
       doc.setFont("helvetica", "bold")
-      doc.setFontSize(9.8)
+      doc.setFontSize(9.5)
       doc.setTextColor(...COLORS.heading)
       doc.text(
         `${topicIndex + 1}. ${topic.subjectLabel} (${formatDuration(topic.duration)})`,
@@ -341,19 +421,37 @@ export function buildSessionHistoryPdf(
       cursorY += 4.6
 
       doc.setFont("helvetica", "normal")
-      doc.setFontSize(9.2)
+      doc.setFontSize(8.8)
       doc.setTextColor(...COLORS.muted)
-      doc.text(hashtagsLines, marginX + 4, cursorY)
-      cursorY += hashtagsLines.length * 4.2
+      doc.text(topicRenderData.hashtagsLines, marginX + 4, cursorY)
+      cursorY += Math.max(topicRenderData.hashtagsLines.length, 1) * 4
 
-      doc.text(reflectionLines, marginX + 4, cursorY)
-      cursorY += reflectionLines.length * 4.2 + 2
+      doc.setTextColor(...COLORS.muted)
+      doc.text(topicRenderData.reflectionLines, marginX + 4, cursorY)
+      cursorY +=
+        Math.max(topicRenderData.reflectionLines.length, 1) * 4 +
+        withMinItemSpacing(2.2)
     }
 
-    ensureSpace(4)
+    cursorY += withMinItemSpacing(4)
+  }
+
+  const totalPages = doc.getNumberOfPages()
+  const generatedFooterLabel = `Generated ${format(input.generatedAt, "MMM d, yyyy")}`
+  for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+    doc.setPage(pageNumber)
     doc.setDrawColor(...COLORS.line)
-    doc.line(marginX, cursorY, pageWidth - marginX, cursorY)
-    cursorY += 5
+    doc.line(marginX, pageHeight - marginBottom - 3.5, pageWidth - marginX, pageHeight - marginBottom - 3.5)
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(8)
+    doc.setTextColor(...COLORS.muted)
+    doc.text(generatedFooterLabel, marginX, pageHeight - marginBottom)
+    doc.text(
+      `Page ${pageNumber} of ${totalPages}`,
+      pageWidth - marginX,
+      pageHeight - marginBottom,
+      { align: "right" }
+    )
   }
 
   return {
