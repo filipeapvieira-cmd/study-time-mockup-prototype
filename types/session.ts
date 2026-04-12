@@ -2,18 +2,16 @@
 
 export interface SessionTopic {
   id: string
-  name: string
   duration: number // Duration in seconds
-}
-
-export interface StudySession {
-  id: string
   subject: string
   subjectLabel: string
   subjectColor: string
   hashtags: string[]
   reflection: string
-  feelings: string
+}
+
+export interface StudySession {
+  id: string
   date: string
   startTime: string // HH:MM format
   endTime: string // HH:MM format

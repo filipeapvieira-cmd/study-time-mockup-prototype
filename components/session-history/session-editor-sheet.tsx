@@ -21,8 +21,8 @@ import { Button } from "@/components/ui/button"
 import { Field, FieldContent, FieldGroup, FieldTitle } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { InputGroup, InputGroupInput, InputGroupText } from "@/components/ui/input-group"
-import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Sheet,
   SheetContent,
@@ -56,6 +56,7 @@ import {
   PROTOTYPE_HASHTAGS,
   PROTOTYPE_SUBJECTS,
 } from "@/lib/study-taxonomy"
+import { cn } from "@/lib/utils"
 import type { TagItem } from "@/types/tag"
 import {
   type StudySession,
@@ -71,6 +72,24 @@ interface SessionEditorSheetProps {
   onOpenChange: (open: boolean) => void
   onSave: (session: StudySession) => void
   onDelete: (sessionId: string) => void
+}
+
+type DurationParts = {
+  h: number
+  m: number
+  s: number
+}
+
+function durationToParts(duration: number): DurationParts {
+  return {
+    h: Math.floor(duration / 3600),
+    m: Math.floor((duration % 3600) / 60),
+    s: duration % 60,
+  }
+}
+
+function partsToDuration(parts: DurationParts): number {
+  return parts.h * 3600 + parts.m * 60 + parts.s
 }
 
 export function SessionEditorSheet({
@@ -91,10 +110,14 @@ export function SessionEditorSheet({
 
   const [topics, setTopics] = React.useState<SessionTopic[]>([])
   const [selectedTopicId, setSelectedTopicId] = React.useState<string | null>(null)
+  const [editTopicDuration, setEditTopicDuration] = React.useState<DurationParts>({
+    h: 0,
+    m: 0,
+    s: 0,
+  })
   const [isEditingTopic, setIsEditingTopic] = React.useState(false)
-  const [editTopicName, setEditTopicName] = React.useState("")
-  const [editTopicDuration, setEditTopicDuration] = React.useState({ h: 0, m: 0, s: 0 })
   const [isAddingTopic, setIsAddingTopic] = React.useState(false)
+  const [isTopicLoading, setIsTopicLoading] = React.useState(false)
 
   const [timeError, setTimeError] = React.useState<string | null>(null)
   const [subjects, setSubjects] = React.useState<TagItem[]>(() =>
@@ -103,114 +126,237 @@ export function SessionEditorSheet({
   const [hashtags, setHashtags] = React.useState<TagItem[]>(() =>
     cloneTagItems(PROTOTYPE_HASHTAGS),
   )
+  const topicLoadTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const selectedTopic = topics.find((topic) => topic.id === selectedTopicId)
+  const loadTopicIntoForm = React.useCallback((topic?: SessionTopic | null) => {
+    setSelectedSubject(topic?.subject ?? "")
+    setSelectedHashtags(topic?.hashtags ?? [])
+    setReflection(topic?.reflection ?? "")
+    setEditTopicDuration(durationToParts(topic?.duration ?? 0))
+  }, [])
+
+  const selectedTopic = React.useMemo(
+    () => topics.find((topic) => topic.id === selectedTopicId) ?? null,
+    [selectedTopicId, topics],
+  )
+
+  const isTopicEditable = isEditingTopic || isAddingTopic
+  const pauseTimeSeconds = pauseMinutes * 60 + pauseSeconds
+  const effectiveTime = calculateEffectiveTime(startTime, endTime, pauseTimeSeconds)
+  const topicDurationSeconds = partsToDuration(editTopicDuration)
+
+  const availableSubjects = React.useMemo(() => {
+    const usedSubjects = new Set(
+      topics
+        .filter((topic) => topic.id !== selectedTopicId)
+        .map((topic) => topic.subject),
+    )
+
+    return subjects.filter(
+      (subject) => subject.value === selectedSubject || !usedSubjects.has(subject.value),
+    )
+  }, [selectedSubject, selectedTopicId, subjects, topics])
+
+  const canAddTopic = React.useMemo(
+    () => subjects.some((subject) => !topics.some((topic) => topic.subject === subject.value)),
+    [subjects, topics],
+  )
+
+  const topicValidationMessage = React.useMemo(() => {
+    if (!selectedSubject) {
+      return "Choose a subject for this topic."
+    }
+
+    const duplicateSubject = topics.some(
+      (topic) => topic.id !== selectedTopicId && topic.subject === selectedSubject,
+    )
+
+    if (duplicateSubject) {
+      return "This subject is already used in this session."
+    }
+
+    return null
+  }, [selectedSubject, selectedTopicId, topics])
 
   React.useEffect(() => {
-    if (!session) return
+    if (!open || !session) return
 
-    setSelectedSubject(session.subject)
-    setSelectedHashtags(session.hashtags)
-    setReflection(session.reflection)
+    if (topicLoadTimeoutRef.current) {
+      clearTimeout(topicLoadTimeoutRef.current)
+      topicLoadTimeoutRef.current = null
+    }
+
+    const initialTopics = session.topics
+    const initialTopic = initialTopics[0] ?? null
+
+    loadTopicIntoForm(initialTopic)
     setStartTime(session.startTime)
     setEndTime(session.endTime)
     setPauseMinutes(Math.floor(session.pauseTime / 60))
     setPauseSeconds(session.pauseTime % 60)
-    setTopics(session.topics)
-    setSelectedTopicId(session.topics[0]?.id || null)
+    setTopics(initialTopics)
+    setSelectedTopicId(initialTopic?.id ?? null)
     setIsEditingTopic(false)
     setIsAddingTopic(false)
+    setIsTopicLoading(false)
     setTimeError(null)
-  }, [session])
+  }, [loadTopicIntoForm, open, session])
 
   React.useEffect(() => {
-    if (!selectedTopic || isAddingTopic) return
+    if (open) return
 
-    setEditTopicName(selectedTopic.name)
-    setEditTopicDuration({
-      h: Math.floor(selectedTopic.duration / 3600),
-      m: Math.floor((selectedTopic.duration % 3600) / 60),
-      s: selectedTopic.duration % 60,
-    })
-  }, [isAddingTopic, selectedTopic])
+    if (topicLoadTimeoutRef.current) {
+      clearTimeout(topicLoadTimeoutRef.current)
+      topicLoadTimeoutRef.current = null
+    }
 
-  const pauseTimeSeconds = pauseMinutes * 60 + pauseSeconds
-  const effectiveTime = calculateEffectiveTime(startTime, endTime, pauseTimeSeconds)
+    setIsTopicLoading(false)
+  }, [open])
+
+  React.useEffect(() => {
+    return () => {
+      if (topicLoadTimeoutRef.current) {
+        clearTimeout(topicLoadTimeoutRef.current)
+      }
+    }
+  }, [])
 
   React.useEffect(() => {
     const validation = validateSessionTimes(startTime, endTime, pauseTimeSeconds)
-    setTimeError(validation.valid ? null : validation.error || null)
+    setTimeError(validation.valid ? null : validation.error ?? null)
   }, [startTime, endTime, pauseTimeSeconds])
 
+  const buildTopicFromForm = React.useCallback(
+    (topicId: string): SessionTopic => {
+      const subjectData = getTagItemByValue(subjects, selectedSubject)
+
+      return {
+        id: topicId,
+        duration: topicDurationSeconds,
+        subject: selectedSubject,
+        subjectLabel: subjectData?.label ?? "",
+        subjectColor: subjectData?.color ?? "",
+        hashtags: selectedHashtags,
+        reflection,
+      }
+    },
+    [reflection, selectedHashtags, selectedSubject, subjects, topicDurationSeconds],
+  )
+
+  const commitSelectedTopic = React.useCallback(
+    (sourceTopics: SessionTopic[]) => {
+      if (!selectedTopicId || topicValidationMessage) {
+        return sourceTopics
+      }
+
+      const updatedTopic = buildTopicFromForm(selectedTopicId)
+
+      return sourceTopics.map((topic) =>
+        topic.id === selectedTopicId ? updatedTopic : topic,
+      )
+    },
+    [buildTopicFromForm, selectedTopicId, topicValidationMessage],
+  )
+
+  const startEditTopic = () => {
+    if (!selectedTopic) return
+
+    loadTopicIntoForm(selectedTopic)
+    setIsAddingTopic(false)
+    setIsEditingTopic(true)
+  }
+
   const startAddTopic = () => {
+    if (!canAddTopic) return
+
+    const nextSubject = subjects.find(
+      (subject) => !topics.some((topic) => topic.subject === subject.value),
+    )
+
+    if (!nextSubject) return
+
+    const draftTopic: SessionTopic = {
+      id: crypto.randomUUID(),
+      duration: 0,
+      subject: nextSubject.value,
+      subjectLabel: nextSubject.label,
+      subjectColor: nextSubject.color,
+      hashtags: [],
+      reflection: "",
+    }
+
+    setTopics((prev) => [...prev, draftTopic])
+    setSelectedTopicId(draftTopic.id)
+    loadTopicIntoForm(draftTopic)
     setIsAddingTopic(true)
     setIsEditingTopic(true)
-    setEditTopicName("")
-    setEditTopicDuration({ h: 0, m: 0, s: 0 })
-    setSelectedTopicId(null)
+    setIsTopicLoading(false)
   }
 
   const saveTopicEdit = () => {
-    if (!editTopicName.trim()) return
-    
-    const durationSeconds = editTopicDuration.h * 3600 + editTopicDuration.m * 60 + editTopicDuration.s
-    
-    if (isAddingTopic) {
-      const newTopic: SessionTopic = {
-        id: crypto.randomUUID(),
-        name: editTopicName.trim(),
-        duration: durationSeconds,
-      }
-      setTopics([...topics, newTopic])
-      setSelectedTopicId(newTopic.id)
-    } else if (selectedTopicId) {
-      setTopics(topics.map((t) =>
-        t.id === selectedTopicId
-          ? { ...t, name: editTopicName.trim(), duration: durationSeconds }
-          : t
-      ))
-    }
-    
+    if (!selectedTopicId || topicValidationMessage) return
+
+    const nextTopics = commitSelectedTopic(topics)
+    const committedTopic = nextTopics.find((topic) => topic.id === selectedTopicId) ?? null
+
+    setTopics(nextTopics)
+    loadTopicIntoForm(committedTopic)
     setIsEditingTopic(false)
     setIsAddingTopic(false)
   }
 
   const cancelTopicEdit = () => {
+    if (isAddingTopic && selectedTopicId) {
+      const remainingTopics = topics.filter((topic) => topic.id !== selectedTopicId)
+      const nextTopic = remainingTopics[0] ?? null
+
+      setTopics(remainingTopics)
+      setSelectedTopicId(nextTopic?.id ?? null)
+      loadTopicIntoForm(nextTopic)
+    } else {
+      loadTopicIntoForm(selectedTopic)
+    }
+
     setIsEditingTopic(false)
     setIsAddingTopic(false)
-    if (topics.length > 0 && !selectedTopicId) {
-      setSelectedTopicId(topics[0].id)
-    }
   }
 
   const deleteTopic = () => {
-    if (!selectedTopicId) return
-    const newTopics = topics.filter((t) => t.id !== selectedTopicId)
-    setTopics(newTopics)
-    setSelectedTopicId(newTopics[0]?.id || null)
+    if (!selectedTopicId || topics.length <= 1) return
+
+    if (topicLoadTimeoutRef.current) {
+      clearTimeout(topicLoadTimeoutRef.current)
+      topicLoadTimeoutRef.current = null
+    }
+
+    const currentIndex = topics.findIndex((topic) => topic.id === selectedTopicId)
+    const remainingTopics = topics.filter((topic) => topic.id !== selectedTopicId)
+    const nextTopic =
+      remainingTopics[Math.max(0, currentIndex - 1)] ?? remainingTopics[0] ?? null
+
+    setTopics(remainingTopics)
+    setSelectedTopicId(nextTopic?.id ?? null)
+    loadTopicIntoForm(nextTopic)
     setIsEditingTopic(false)
+    setIsAddingTopic(false)
+    setIsTopicLoading(false)
   }
 
   const handleSave = () => {
-    if (!session || timeError) return
+    if (!session || timeError || !selectedTopicId || topicValidationMessage) return
 
-    const selectedSubjectData = getTagItemByValue(subjects, selectedSubject)
+    const nextTopics = isTopicEditable ? commitSelectedTopic(topics) : topics
 
     const updatedSession: StudySession = {
       ...session,
-      subject: selectedSubject,
-      subjectLabel: selectedSubjectData?.label || "",
-      subjectColor: selectedSubjectData?.color || "",
-      hashtags: selectedHashtags,
-      reflection,
       startTime,
       endTime,
       pauseTime: pauseTimeSeconds,
       effectiveTime,
-      topics,
+      topics: nextTopics,
       updatedAt: new Date().toISOString(),
     }
-    
+
     onSave(updatedSession)
   }
 
@@ -219,118 +365,153 @@ export function SessionEditorSheet({
     onDelete(session.id)
   }
 
+  const handleTopicSelect = (value: string) => {
+    if (value === selectedTopicId || isTopicEditable) return
+
+    const topic = topics.find((item) => item.id === value)
+
+    if (!topic) return
+
+    if (topicLoadTimeoutRef.current) {
+      clearTimeout(topicLoadTimeoutRef.current)
+    }
+
+    setIsTopicLoading(true)
+    topicLoadTimeoutRef.current = setTimeout(() => {
+      setSelectedTopicId(value)
+      loadTopicIntoForm(topic)
+      setIsTopicLoading(false)
+      topicLoadTimeoutRef.current = null
+    }, 350)
+  }
+
   if (!session) return null
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent 
-        side="right" 
-        className="w-full sm:max-w-2xl md:max-w-3xl flex flex-col p-0 overflow-hidden"
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col overflow-hidden p-0 sm:max-w-2xl md:max-w-3xl"
       >
-        <SheetHeader className="px-6 pt-6 pb-4 border-b shrink-0">
-          <SheetTitle className="text-xl">Edit Session</SheetTitle>
-          <SheetDescription>
-            {session.date} &middot; {formatSecondsToDuration(session.effectiveTime)} recorded
-          </SheetDescription>
-        </SheetHeader>
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <SheetHeader className="shrink-0 border-b px-6 pt-6 pb-4">
+            <SheetTitle className="text-xl">Edit Session</SheetTitle>
+            <SheetDescription>
+              {session.date} &middot; {formatSecondsToDuration(effectiveTime)} recorded
+            </SheetDescription>
+          </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="px-6 py-6 space-y-6">
-            {/* Section: Session Metadata */}
-            <section>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-                Session Metadata
-              </h3>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Subject</Label>
-                  <SubjectSelect
-                    subjects={subjects}
-                    hashtags={hashtags}
-                    value={selectedSubject}
-                    onChange={setSelectedSubject}
-                    onSubjectsChange={setSubjects}
-                    onHashtagsChange={setHashtags}
+          <div className="flex-1 overflow-y-auto">
+            <div className="flex flex-col gap-6 px-6 py-6">
+              <section>
+                <h3 className="mb-4 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+                  Topic Metadata
+                </h3>
+                <FieldGroup className="gap-4">
+                  <Field>
+                    <FieldTitle>Subject</FieldTitle>
+                    <FieldContent>
+                      <div className={cn(!isTopicEditable && "pointer-events-none opacity-80")}>
+                        <SubjectSelect
+                          subjects={availableSubjects}
+                          hashtags={hashtags}
+                          value={selectedSubject}
+                          onChange={setSelectedSubject}
+                          onSubjectsChange={setSubjects}
+                          onHashtagsChange={setHashtags}
+                        />
+                      </div>
+                    </FieldContent>
+                  </Field>
+
+                  <Field>
+                    <FieldTitle>Hashtags</FieldTitle>
+                    <FieldContent>
+                      <div className={cn(!isTopicEditable && "pointer-events-none opacity-80")}>
+                        <HashtagMultiSelect
+                          subjects={subjects}
+                          hashtags={hashtags}
+                          value={selectedHashtags}
+                          onChange={setSelectedHashtags}
+                          onSubjectsChange={setSubjects}
+                          onHashtagsChange={setHashtags}
+                        />
+                      </div>
+                    </FieldContent>
+                  </Field>
+                </FieldGroup>
+
+                {topicValidationMessage ? (
+                  <div className="mt-4 flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    <AlertTriangle className="size-4 shrink-0" />
+                    {topicValidationMessage}
+                  </div>
+                ) : null}
+              </section>
+
+              <Separator />
+
+              <section>
+                <h3 className="mb-4 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+                  Reflection
+                </h3>
+                <div className={cn(!isTopicEditable && "pointer-events-none opacity-80")}>
+                  <SessionReflectionField
+                    value={reflection}
+                    onChange={setReflection}
+                    placeholder="Your topic reflection..."
                   />
                 </div>
+              </section>
 
-                <div className="space-y-2">
-                  <Label>Hashtags</Label>
-                  <HashtagMultiSelect
-                    subjects={subjects}
-                    hashtags={hashtags}
-                    value={selectedHashtags}
-                    onChange={setSelectedHashtags}
-                    onSubjectsChange={setSubjects}
-                    onHashtagsChange={setHashtags}
-                  />
-                </div>
-              </div>
-            </section>
+              <Separator />
 
-            <Separator />
-
-            {/* Section: Reflection (Main Focus) */}
             <section>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-                Reflection
-              </h3>
-              <SessionReflectionField
-                value={reflection}
-                onChange={setReflection}
-                placeholder="Your session reflection..."
-              />
-            </section>
-
-            <Separator />
-
-            {/* Section: Session Timer */}
-            <section>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+              <h3 className="mb-4 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
                 {SESSION_TIMER_LABEL}
               </h3>
 
-              {timeError && (
+              {timeError ? (
                 <div className="mb-4 flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
                   <AlertTriangle className="size-4 shrink-0" />
                   {timeError}
                 </div>
-              )}
+              ) : null}
 
-              <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start-time" className="flex items-center gap-2 text-xs">
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="start-time" className="flex items-center gap-2 text-xs">
                     <Play className="size-3" />
                     Start
-                  </Label>
+                  </label>
                   <Input
                     id="start-time"
                     type="time"
                     value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
+                    onChange={(event) => setStartTime(event.target.value)}
                     className="h-9"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="end-time" className="flex items-center gap-2 text-xs">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="end-time" className="flex items-center gap-2 text-xs">
                     <Clock className="size-3" />
                     End
-                  </Label>
+                  </label>
                   <Input
                     id="end-time"
                     type="time"
                     value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
+                    onChange={(event) => setEndTime(event.target.value)}
                     className="h-9"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-xs">
+                <div className="flex flex-col gap-2">
+                  <span className="flex items-center gap-2 text-xs">
                     <Pause className="size-3" />
                     Paused (m/s)
-                  </Label>
+                  </span>
                   <InputGroup
                     aria-label="Paused duration"
                     data-invalid={timeError ? "true" : undefined}
@@ -340,7 +521,9 @@ export function SessionEditorSheet({
                       type="number"
                       min={0}
                       value={pauseMinutes}
-                      onChange={(e) => setPauseMinutes(Math.max(0, parseInt(e.target.value) || 0))}
+                      onChange={(event) =>
+                        setPauseMinutes(Math.max(0, parseInt(event.target.value, 10) || 0))
+                      }
                       className="min-w-0 basis-0 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       placeholder="mm"
                       aria-label="Paused minutes"
@@ -353,7 +536,11 @@ export function SessionEditorSheet({
                       min={0}
                       max={59}
                       value={pauseSeconds}
-                      onChange={(e) => setPauseSeconds(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
+                      onChange={(event) =>
+                        setPauseSeconds(
+                          Math.min(59, Math.max(0, parseInt(event.target.value, 10) || 0)),
+                        )
+                      }
                       className="min-w-0 basis-0 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       placeholder="ss"
                       aria-label="Paused seconds"
@@ -361,11 +548,11 @@ export function SessionEditorSheet({
                   </InputGroup>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-xs">
+                <div className="flex flex-col gap-2">
+                  <span className="flex items-center gap-2 text-xs">
                     <Clock className="size-3" />
                     Effective
-                  </Label>
+                  </span>
                   <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm font-mono">
                     {timeError ? "--:--:--" : formatSecondsToDuration(effectiveTime)}
                   </div>
@@ -375,213 +562,211 @@ export function SessionEditorSheet({
 
             <Separator />
 
-            {/* Section: Topic */}
             <section>
               <FieldGroup className="gap-4">
                 <Field>
-                  <FieldTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  <FieldTitle className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
                     {TOPIC_LABEL}
                   </FieldTitle>
                   <FieldContent className="gap-3">
-                    {topics.length > 0 || isAddingTopic ? (
-                      <>
-                        <div className="w-full">
-                          {isEditingTopic ? (
-                            <Input
-                              value={editTopicName}
-                              onChange={(e) => setEditTopicName(e.target.value)}
-                              placeholder={`${TOPIC_LABEL} name...`}
-                              className="h-9 w-full"
-                              autoFocus
-                            />
-                          ) : (
-                            <Select
-                              value={selectedTopicId || undefined}
-                              onValueChange={setSelectedTopicId}
-                            >
-                              <SelectTrigger className="h-9 w-full">
-                                <SelectValue placeholder={`Select a ${TOPIC_LABEL.toLowerCase()}...`} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {topics.map((topic) => (
-                                  <SelectItem key={topic.id} value={topic.id}>
-                                    <div className="flex min-w-0 items-center gap-2">
-                                      <span className="truncate">{topic.name}</span>
-                                      <span className="font-mono text-xs text-muted-foreground">
-                                        ({formatSecondsToDuration(topic.duration)})
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </div>
-
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          {isEditingTopic ? (
-                            <InputGroup aria-label={`${TOPIC_LABEL} duration`} className="w-full sm:max-w-sm">
-                              <InputGroupInput
-                                type="number"
-                                min={0}
-                                max={23}
-                                value={editTopicDuration.h}
-                                onChange={(e) =>
-                                  setEditTopicDuration({
-                                    ...editTopicDuration,
-                                    h: Math.max(0, parseInt(e.target.value) || 0),
-                                  })
-                                }
-                                className="min-w-0 basis-0 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                placeholder="hh"
-                                aria-label="Topic hours"
-                              />
-                              <InputGroupText className="shrink-0 px-1 font-medium tabular-nums">
-                                h
-                              </InputGroupText>
-                              <InputGroupInput
-                                type="number"
-                                min={0}
-                                max={59}
-                                value={editTopicDuration.m}
-                                onChange={(e) =>
-                                  setEditTopicDuration({
-                                    ...editTopicDuration,
-                                    m: Math.min(59, Math.max(0, parseInt(e.target.value) || 0)),
-                                  })
-                                }
-                                className="min-w-0 basis-0 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                placeholder="mm"
-                                aria-label="Topic minutes"
-                              />
-                              <InputGroupText className="shrink-0 px-1 font-medium tabular-nums">
-                                m
-                              </InputGroupText>
-                              <InputGroupInput
-                                type="number"
-                                min={0}
-                                max={59}
-                                value={editTopicDuration.s}
-                                onChange={(e) =>
-                                  setEditTopicDuration({
-                                    ...editTopicDuration,
-                                    s: Math.min(59, Math.max(0, parseInt(e.target.value) || 0)),
-                                  })
-                                }
-                                className="min-w-0 basis-0 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                placeholder="ss"
-                                aria-label="Topic seconds"
-                              />
-                              <InputGroupText className="shrink-0 px-1 font-medium tabular-nums">
-                                s
-                              </InputGroupText>
-                            </InputGroup>
-                          ) : (
-                            <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm font-mono sm:min-w-36">
-                              {selectedTopic ? formatSecondsToDuration(selectedTopic.duration) : "--:--:--"}
-                            </div>
-                          )}
-
-                          <div className="flex items-center gap-1 self-end sm:self-auto">
-                            {isEditingTopic ? (
-                              <>
-                                <Button size="sm" onClick={saveTopicEdit} disabled={!editTopicName.trim()}>
-                                  <Check className="size-4" />
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={cancelTopicEdit}>
-                                  <X className="size-4" />
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="size-9"
-                                  onClick={() => setIsEditingTopic(true)}
-                                  disabled={!selectedTopicId}
-                                >
-                                  <Pencil className="size-4" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="size-9 text-destructive hover:text-destructive"
-                                  onClick={deleteTopic}
-                                  disabled={!selectedTopicId}
-                                >
-                                  <Trash2 className="size-4" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="outline"
-                                  className="size-9"
-                                  onClick={startAddTopic}
-                                >
-                                  <Plus className="size-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        onClick={startAddTopic}
-                        className="w-full gap-2"
+                    <div className="w-full">
+                      <Select
+                        value={selectedTopicId || undefined}
+                        onValueChange={handleTopicSelect}
+                        disabled={isTopicEditable || topics.length === 0}
                       >
-                        <Plus className="size-4" />
-                        Add {TOPIC_LABEL}
-                      </Button>
-                    )}
+                        <SelectTrigger className="h-9 w-full">
+                          <SelectValue placeholder={`Select a ${TOPIC_LABEL.toLowerCase()}...`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {topics.map((topic) => (
+                            <SelectItem key={topic.id} value={topic.id}>
+                              <div className="flex min-w-0 items-center gap-2">
+                                <span className="truncate">{topic.subjectLabel}</span>
+                                <span className="font-mono text-xs text-muted-foreground">
+                                  ({formatSecondsToDuration(topic.duration)})
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      {isTopicEditable ? (
+                        <InputGroup aria-label={`${TOPIC_LABEL} duration`} className="w-full sm:max-w-sm">
+                          <InputGroupInput
+                            type="number"
+                            min={0}
+                            value={editTopicDuration.h}
+                            onChange={(event) =>
+                              setEditTopicDuration((prev) => ({
+                                ...prev,
+                                h: Math.max(0, parseInt(event.target.value, 10) || 0),
+                              }))
+                            }
+                            className="min-w-0 basis-0 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            placeholder="hh"
+                            aria-label="Topic hours"
+                          />
+                          <InputGroupText className="shrink-0 px-1 font-medium tabular-nums">
+                            h
+                          </InputGroupText>
+                          <InputGroupInput
+                            type="number"
+                            min={0}
+                            max={59}
+                            value={editTopicDuration.m}
+                            onChange={(event) =>
+                              setEditTopicDuration((prev) => ({
+                                ...prev,
+                                m: Math.min(59, Math.max(0, parseInt(event.target.value, 10) || 0)),
+                              }))
+                            }
+                            className="min-w-0 basis-0 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            placeholder="mm"
+                            aria-label="Topic minutes"
+                          />
+                          <InputGroupText className="shrink-0 px-1 font-medium tabular-nums">
+                            m
+                          </InputGroupText>
+                          <InputGroupInput
+                            type="number"
+                            min={0}
+                            max={59}
+                            value={editTopicDuration.s}
+                            onChange={(event) =>
+                              setEditTopicDuration((prev) => ({
+                                ...prev,
+                                s: Math.min(59, Math.max(0, parseInt(event.target.value, 10) || 0)),
+                              }))
+                            }
+                            className="min-w-0 basis-0 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            placeholder="ss"
+                            aria-label="Topic seconds"
+                          />
+                          <InputGroupText className="shrink-0 px-1 font-medium tabular-nums">
+                            s
+                          </InputGroupText>
+                        </InputGroup>
+                      ) : (
+                        <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm font-mono sm:min-w-36">
+                          {selectedTopic ? formatSecondsToDuration(selectedTopic.duration) : "--:--:--"}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-1 self-end sm:self-auto">
+                        {isTopicEditable ? (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={saveTopicEdit}
+                              disabled={Boolean(topicValidationMessage)}
+                            >
+                              <Check className="size-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={cancelTopicEdit}>
+                              <X className="size-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-9"
+                              onClick={startEditTopic}
+                              disabled={!selectedTopic}
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-9 text-destructive hover:text-destructive"
+                              onClick={deleteTopic}
+                              disabled={!selectedTopic || topics.length <= 1}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="size-9"
+                              onClick={startAddTopic}
+                              disabled={!canAddTopic}
+                            >
+                              <Plus className="size-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </FieldContent>
                 </Field>
               </FieldGroup>
             </section>
           </div>
-        </div>
-
-        <SheetFooter className="px-6 py-4 border-t shrink-0">
-          <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-between">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm" className="gap-2">
-                  <Trash2 className="size-4" />
-                  Delete Session
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete this session?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the session
-                    and all associated data including topics and reflection notes.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={!!timeError} className="gap-2">
-                <Save className="size-4" />
-                Save Changes
-              </Button>
-            </div>
           </div>
-        </SheetFooter>
+          <SheetFooter className="shrink-0 border-t px-6 py-4">
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-between">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" className="gap-2">
+                    <Trash2 className="size-4" />
+                    Delete Session
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this session?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the session
+                      and all associated topic notes.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={Boolean(timeError || topicValidationMessage || !selectedTopicId)}
+                  className="gap-2"
+                >
+                  <Save className="size-4" />
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </SheetFooter>
+
+          {open && isTopicLoading ? (
+            <div
+              aria-live="polite"
+              className="absolute inset-0 flex items-center justify-center bg-background/45 backdrop-blur-[1px]"
+            >
+              <div className="flex flex-col items-center gap-3 rounded-lg border bg-background px-6 py-5 text-center shadow-sm">
+                <Spinner className="size-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Loading topic details...</p>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </SheetContent>
     </Sheet>
   )

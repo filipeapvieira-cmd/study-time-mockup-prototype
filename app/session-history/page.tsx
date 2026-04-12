@@ -43,185 +43,257 @@ import { Calendar } from "@/components/ui/calendar"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { SessionEditorSheet } from "@/components/session-history/session-editor-sheet"
 import { getTagItemByValue, PROTOTYPE_SUBJECTS } from "@/lib/study-taxonomy"
-import type { StudySession } from "@/types/session"
+import type { SessionTopic, StudySession } from "@/types/session"
 
-type SampleSessionConfig = Omit<StudySession, "subjectColor" | "subjectLabel">
+type SampleTopicConfig = Omit<SessionTopic, "subjectLabel" | "subjectColor">
+type SampleSessionConfig = Omit<StudySession, "topics"> & {
+  topics: SampleTopicConfig[]
+}
 
-function createSampleSession(session: SampleSessionConfig): StudySession {
-  const subject = getTagItemByValue(PROTOTYPE_SUBJECTS, session.subject)
+function createTopic(topic: SampleTopicConfig): SessionTopic {
+  const subject = getTagItemByValue(PROTOTYPE_SUBJECTS, topic.subject)
 
   if (!subject) {
-    throw new Error(`Unknown prototype subject: ${session.subject}`)
+    throw new Error(`Unknown prototype subject: ${topic.subject}`)
   }
 
   return {
-    ...session,
+    ...topic,
     subjectLabel: subject.label,
     subjectColor: subject.color,
+  }
+}
+
+function createSampleSession(session: SampleSessionConfig): StudySession {
+  return {
+    ...session,
+    topics: session.topics.map(createTopic),
   }
 }
 
 const sampleSessions: StudySession[] = [
   createSampleSession({
     id: "1",
-    subject: "computer-science",
-    hashtags: ["research"],
-    reflection: "Today I focused on understanding the fundamentals of user research methodologies. I learned about different interview techniques and how to synthesize qualitative data effectively.",
-    feelings: "Motivated",
     date: "2026-03-28",
     startTime: "14:00",
     endTime: "14:49",
     pauseTime: 0,
     effectiveTime: 2930,
     topics: [
-      { id: "t1", name: "User Research Methods", duration: 1200 },
-      { id: "t2", name: "Interview Techniques", duration: 900 },
-      { id: "t3", name: "Data Synthesis", duration: 830 },
+      {
+        id: "t1",
+        duration: 1200,
+        subject: "computer-science",
+        hashtags: ["research"],
+        reflection: "Mapped the difference between exploratory and evaluative research methods.",
+      },
+      {
+        id: "t2",
+        duration: 900,
+        subject: "literature",
+        hashtags: ["philosophy"],
+        reflection: "Focused on phrasing open-ended prompts and documenting quotes with less bias.",
+      },
+      {
+        id: "t3",
+        duration: 830,
+        subject: "mathematics",
+        hashtags: ["data-structures"],
+        reflection: "Grouped interview findings into clusters and tested a first-pass synthesis structure.",
+      },
     ],
     createdAt: "2026-03-28T14:00:00Z",
     updatedAt: "2026-03-28T14:49:00Z",
   }),
   createSampleSession({
     id: "2",
-    subject: "theoretical-physics",
-    hashtags: ["quantum"],
-    reflection: "Deep dive into wave-particle duality. Finally wrapping my head around the core concepts.",
-    feelings: "Challenged",
     date: "2026-03-28",
     startTime: "09:00",
     endTime: "10:36",
     pauseTime: 60,
     effectiveTime: 5760,
     topics: [
-      { id: "t4", name: "Wave-Particle Duality", duration: 3600 },
-      { id: "t5", name: "Quantum States", duration: 2160 },
+      {
+        id: "t4",
+        duration: 3600,
+        subject: "theoretical-physics",
+        hashtags: ["quantum"],
+        reflection: "Revisited the double-slit experiment and the measurement interpretation.",
+      },
+      {
+        id: "t5",
+        duration: 2160,
+        subject: "mathematics",
+        hashtags: ["algebra"],
+        reflection: "Spent time expressing state changes in cleaner linear algebra notation.",
+      },
     ],
     createdAt: "2026-03-28T09:00:00Z",
     updatedAt: "2026-03-28T10:36:00Z",
   }),
   createSampleSession({
     id: "3",
-    subject: "mathematics",
-    hashtags: ["calculus"],
-    reflection: "Practiced integration by parts. Needed more time on the tricky trigonometric substitutions.",
-    feelings: "Focused",
     date: "2026-03-27",
     startTime: "16:00",
     endTime: "17:11",
     pauseTime: 0,
     effectiveTime: 4260,
     topics: [
-      { id: "t6", name: "Integration by Parts", duration: 2400 },
-      { id: "t7", name: "Trig Substitutions", duration: 1860 },
+      {
+        id: "t6",
+        duration: 2400,
+        subject: "mathematics",
+        hashtags: ["calculus"],
+        reflection: "Worked through repeated integration-by-parts patterns until the setup felt automatic.",
+      },
+      {
+        id: "t7",
+        duration: 1860,
+        subject: "theoretical-physics",
+        hashtags: ["mechanics"],
+        reflection: "Applied substitution patterns to motion equations and checked where the setup still slowed me down.",
+      },
     ],
     createdAt: "2026-03-27T16:00:00Z",
     updatedAt: "2026-03-27T17:11:00Z",
   }),
   createSampleSession({
     id: "4",
-    subject: "computer-science",
-    hashtags: ["algorithms"],
-    reflection: "",
-    feelings: "",
     date: "2026-03-25",
     startTime: "11:00",
     endTime: "12:25",
     pauseTime: 0,
     effectiveTime: 5100,
-    topics: [],
+    topics: [
+      {
+        id: "t8",
+        duration: 5100,
+        subject: "computer-science",
+        hashtags: ["algorithms"],
+        reflection: "Worked through graph traversal tradeoffs and compared two shortest-path strategies.",
+      },
+    ],
     createdAt: "2026-03-25T11:00:00Z",
     updatedAt: "2026-03-25T12:25:00Z",
   }),
   createSampleSession({
     id: "5",
-    subject: "literature",
-    hashtags: [],
-    reflection: "",
-    feelings: "",
     date: "2026-03-23",
     startTime: "10:00",
     endTime: "11:15",
     pauseTime: 0,
     effectiveTime: 4492,
-    topics: [],
+    topics: [
+      {
+        id: "t9",
+        duration: 4492,
+        subject: "literature",
+        hashtags: ["philosophy"],
+        reflection: "Annotated a dense essay and tracked how the author shifts tone between arguments.",
+      },
+    ],
     createdAt: "2026-03-23T10:00:00Z",
     updatedAt: "2026-03-23T11:15:00Z",
   }),
   createSampleSession({
     id: "6",
-    subject: "chemistry",
-    hashtags: [],
-    reflection: "",
-    feelings: "",
     date: "2026-03-22",
     startTime: "14:00",
     endTime: "15:29",
     pauseTime: 0,
     effectiveTime: 5318,
-    topics: [],
+    topics: [
+      {
+        id: "t10",
+        duration: 5318,
+        subject: "chemistry",
+        hashtags: ["mechanics"],
+        reflection: "Reviewed reaction energy diagrams and compared why some catalysts change the pathway shape.",
+      },
+    ],
     createdAt: "2026-03-22T14:00:00Z",
     updatedAt: "2026-03-22T15:29:00Z",
   }),
   createSampleSession({
     id: "7",
-    subject: "biology",
-    hashtags: [],
-    reflection: "",
-    feelings: "",
     date: "2026-03-22",
     startTime: "09:00",
     endTime: "11:07",
     pauseTime: 0,
     effectiveTime: 7645,
-    topics: [],
+    topics: [
+      {
+        id: "t11",
+        duration: 7645,
+        subject: "biology",
+        hashtags: ["research"],
+        reflection: "Traced how cell-signaling examples map to a larger feedback-loop pattern across systems.",
+      },
+    ],
     createdAt: "2026-03-22T09:00:00Z",
     updatedAt: "2026-03-22T11:07:00Z",
   }),
   createSampleSession({
     id: "8",
-    subject: "history",
-    hashtags: [],
-    reflection: "",
-    feelings: "",
     date: "2026-03-21",
     startTime: "15:00",
     endTime: "16:03",
     pauseTime: 0,
     effectiveTime: 3787,
-    topics: [],
+    topics: [
+      {
+        id: "t12",
+        duration: 3787,
+        subject: "history",
+        hashtags: ["philosophy"],
+        reflection: "Followed the sequence of political decisions that turned a local dispute into a wider conflict.",
+      },
+    ],
     createdAt: "2026-03-21T15:00:00Z",
     updatedAt: "2026-03-21T16:03:00Z",
   }),
   createSampleSession({
     id: "9",
-    subject: "computer-science",
-    hashtags: ["research"],
-    reflection: "Very productive session today. Made significant progress on the user persona development.",
-    feelings: "Very good",
     date: "2026-03-21",
     startTime: "10:00",
     endTime: "10:52",
     pauseTime: 0,
     effectiveTime: 3121,
     topics: [
-      { id: "t6", name: "User Personas", duration: 1800 },
-      { id: "t7", name: "Journey Mapping", duration: 1321 },
+      {
+        id: "t13",
+        duration: 1800,
+        subject: "computer-science",
+        hashtags: ["research"],
+        reflection: "Refined primary persona motivations and removed duplicated assumptions.",
+      },
+      {
+        id: "t14",
+        duration: 1321,
+        subject: "history",
+        hashtags: ["philosophy"],
+        reflection: "Documented the sequence of user touchpoints and where decision friction appeared.",
+      },
     ],
     createdAt: "2026-03-21T10:00:00Z",
     updatedAt: "2026-03-21T10:52:00Z",
   }),
   createSampleSession({
     id: "10",
-    subject: "literature",
-    hashtags: [],
-    reflection: "",
-    feelings: "",
     date: "2026-03-18",
     startTime: "13:00",
     endTime: "14:07",
     pauseTime: 0,
     effectiveTime: 4018,
-    topics: [],
+    topics: [
+      {
+        id: "t15",
+        duration: 4018,
+        subject: "literature",
+        hashtags: ["research"],
+        reflection: "Compared two critical interpretations and noted where their assumptions diverge most sharply.",
+      },
+    ],
     createdAt: "2026-03-18T13:00:00Z",
     updatedAt: "2026-03-18T14:07:00Z",
   }),
@@ -430,7 +502,19 @@ export default function SessionHistoryPage() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleRowClick(session)}
                   >
-                    <TableCell className="whitespace-nowrap">{session.subjectLabel}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {session.topics.map((topic) => (
+                          <span
+                            key={topic.id}
+                            className="text-sm font-medium leading-tight"
+                            style={{ color: topic.subjectColor }}
+                          >
+                            {topic.subjectLabel}
+                          </span>
+                        ))}
+                      </div>
+                    </TableCell>
                     <TableCell className="whitespace-nowrap">{session.date}</TableCell>
                     <TableCell className="whitespace-nowrap text-right font-mono">
                       {formatDuration(session.effectiveTime)}
@@ -455,61 +539,75 @@ export default function SessionHistoryPage() {
                 
                 {/* Sessions for this date */}
                 <div className="flex flex-col gap-3">
-                  {groupedSessions[date].map((session) => (
-                    <div
-                      key={session.id}
-                      className="group cursor-pointer rounded-lg border bg-card p-4 transition-all hover:shadow-md"
-                      style={{ borderLeftWidth: "4px", borderLeftColor: session.subjectColor }}
-                      onClick={() => handleRowClick(session)}
-                    >
-                      <div className="flex gap-4">
-                        {/* Left side - Time and Duration */}
-                        <div className="flex shrink-0 flex-col items-start gap-1 text-muted-foreground">
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="size-3.5" />
-                            <span className="text-sm font-medium text-foreground">
-                              {session.startTime}
+                  {groupedSessions[date].map((session) => {
+                    const leadTopic = session.topics[0]
+
+                    return (
+                      <div
+                        key={session.id}
+                        className="group cursor-pointer rounded-lg border bg-card p-4 transition-all hover:shadow-md"
+                        style={{ borderLeftWidth: "4px", borderLeftColor: leadTopic.subjectColor }}
+                        onClick={() => handleRowClick(session)}
+                      >
+                        <div className="flex gap-4">
+                          {/* Left side - Time and Duration */}
+                          <div className="flex shrink-0 flex-col items-start gap-1 text-muted-foreground">
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="size-3.5" />
+                              <span className="text-sm font-medium text-foreground">
+                                {session.startTime}
+                              </span>
+                            </div>
+                            <span className="text-xs">
+                              {formatDurationHuman(session.effectiveTime)}
                             </span>
                           </div>
-                          <span className="text-xs">
-                            {formatDurationHuman(session.effectiveTime)}
-                          </span>
-                        </div>
 
-                        {/* Right side - Subject */}
-                        <div className="min-w-0 flex-1">
-                          {/* Subject and Hashtags */}
-                          <div className="mb-1 flex flex-wrap items-center gap-2">
-                            <span
-                              className="font-medium"
-                              style={{ color: session.subjectColor }}
-                            >
-                              {session.subjectLabel}
-                            </span>
-                            {session.hashtags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="text-sm text-muted-foreground"
-                              >
-                                #{tag}
-                              </span>
+                          {/* Right side - Topic list */}
+                          <div className="flex min-w-0 flex-1 flex-col gap-3">
+                            {session.topics.map((topic) => (
+                              <div key={topic.id} className="rounded-md border bg-muted/20 p-3">
+                                <div className="mb-2 flex items-center justify-between gap-3">
+                                  <span
+                                    className="font-medium"
+                                    style={{ color: topic.subjectColor }}
+                                  >
+                                    {topic.subjectLabel}
+                                  </span>
+                                  <span className="text-xs font-mono text-muted-foreground">
+                                    {formatDurationHuman(topic.duration)}
+                                  </span>
+                                </div>
+
+                                {topic.hashtags.length > 0 ? (
+                                  <div className="mb-2 flex flex-wrap gap-2">
+                                    {topic.hashtags.map((tag) => (
+                                      <span
+                                        key={tag}
+                                        className="text-sm text-muted-foreground"
+                                      >
+                                        #{tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : null}
+
+                                {topic.reflection ? (
+                                  <p className="text-sm text-foreground/80">
+                                    {topic.reflection}
+                                  </p>
+                                ) : (
+                                  <p className="text-sm italic text-muted-foreground">
+                                    No reflection logged for this topic.
+                                  </p>
+                                )}
+                              </div>
                             ))}
                           </div>
-
-                          {/* Reflection */}
-                          {session.reflection ? (
-                            <p className="mb-2 text-sm text-foreground/80">
-                              {session.reflection}
-                            </p>
-                          ) : (
-                            <p className="mb-2 text-sm italic text-muted-foreground">
-                              No reflection logged for this session.
-                            </p>
-                          )}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             ))}
