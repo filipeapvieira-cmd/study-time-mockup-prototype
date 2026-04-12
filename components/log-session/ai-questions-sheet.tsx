@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Sparkles, RefreshCw, ChevronRight } from "lucide-react"
+import { Sparkles, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -12,7 +12,6 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
-import { cn } from "@/lib/utils"
 
 // Mock AI-generated questions
 const mockQuestions = [
@@ -41,7 +40,6 @@ interface AIQuestionsSheetProps {
 export function AIQuestionsSheet({ open, onOpenChange }: AIQuestionsSheetProps) {
   const [questions, setQuestions] = React.useState<typeof mockQuestions>([])
   const [isGenerating, setIsGenerating] = React.useState(false)
-  const [expandedQuestion, setExpandedQuestion] = React.useState<string | null>(null)
 
   const generateQuestions = async () => {
     setIsGenerating(true)
@@ -62,12 +60,10 @@ export function AIQuestionsSheet({ open, onOpenChange }: AIQuestionsSheetProps) 
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Sparkles className="size-5" />
-            Reflection Prompts
-          </SheetTitle>
+          <SheetTitle>Reflection Prompts</SheetTitle>
           <SheetDescription>
-            AI-generated questions to guide your reflection
+            Consider this questions as you continue your reflection. There is no
+            right answer - explore your thoughts freely.
           </SheetDescription>
         </SheetHeader>
 
@@ -82,36 +78,13 @@ export function AIQuestionsSheet({ open, onOpenChange }: AIQuestionsSheetProps) 
           ) : questions.length > 0 ? (
             <>
               {questions.map((q) => (
-                <Card
-                  key={q.id}
-                  className={cn(
-                    "cursor-pointer transition-all hover:border-foreground/20",
-                    expandedQuestion === q.id && "border-foreground/20"
-                  )}
-                  onClick={() =>
-                    setExpandedQuestion(expandedQuestion === q.id ? null : q.id)
-                  }
-                >
+                <Card key={q.id}>
                   <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <ChevronRight
-                        className={cn(
-                          "mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform",
-                          expandedQuestion === q.id && "rotate-90"
-                        )}
-                      />
-                      <div className="flex-1">
-                        <Badge variant="secondary" className="mb-2 text-xs">
-                          {q.type}
-                        </Badge>
-                        <p className="text-sm leading-relaxed">{q.question}</p>
-                        {expandedQuestion === q.id && (
-                          <p className="mt-3 text-xs text-muted-foreground">
-                            Consider this question as you continue your reflection.
-                            There is no right answer - explore your thoughts freely.
-                          </p>
-                        )}
-                      </div>
+                    <div className="pl-7">
+                      <Badge variant="secondary" className="mb-2 text-xs">
+                        {q.type}
+                      </Badge>
+                      <p className="text-sm leading-relaxed">{q.question}</p>
                     </div>
                   </CardContent>
                 </Card>
