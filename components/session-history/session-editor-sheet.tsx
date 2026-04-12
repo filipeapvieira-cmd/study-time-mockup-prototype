@@ -19,6 +19,7 @@ import { SessionReflectionField } from "@/components/session-fields/session-refl
 import { SubjectSelect } from "@/components/session-fields/subject-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { InputGroup, InputGroupInput, InputGroupText } from "@/components/ui/input-group"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -327,29 +328,36 @@ export function SessionEditorSheet({
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2 text-xs">
                     <Pause className="size-3" />
-                    Paused
+                    Paused (m/s)
                   </Label>
-                  <div className="flex gap-1">
-                    <Input
+                  <InputGroup
+                    aria-label="Paused duration"
+                    data-invalid={timeError ? "true" : undefined}
+                    className="h-9"
+                  >
+                    <InputGroupInput
                       type="number"
                       min={0}
-                      max={59}
                       value={pauseMinutes}
                       onChange={(e) => setPauseMinutes(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="text-center h-9 text-sm"
-                      placeholder="m"
+                      className="min-w-0 basis-0 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      placeholder="mm"
+                      aria-label="Paused minutes"
                     />
-                    <span className="self-center text-muted-foreground">:</span>
-                    <Input
+                    <InputGroupText className="shrink-0 px-1 font-medium tabular-nums">
+                      :
+                    </InputGroupText>
+                    <InputGroupInput
                       type="number"
                       min={0}
                       max={59}
                       value={pauseSeconds}
                       onChange={(e) => setPauseSeconds(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
-                      className="text-center h-9 text-sm"
-                      placeholder="s"
+                      className="min-w-0 basis-0 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      placeholder="ss"
+                      aria-label="Paused seconds"
                     />
-                  </div>
+                  </InputGroup>
                 </div>
 
                 <div className="space-y-2">
