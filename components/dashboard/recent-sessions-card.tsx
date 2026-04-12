@@ -7,12 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { TEMP_STUDY_SESSIONS } from "@/lib/session-dummy-data"
+import { buildSessionHistoryEditorHref } from "@/lib/session-history-route-state"
 import Link from "next/link"
 
 type RecentSessionTopic = {
   id: string
   sessionId: string
+  topicId: string
   subjectLabel: string
+  subjectColor: string
   durationSeconds: number
   createdAt: string
 }
@@ -37,7 +40,9 @@ export function RecentSessionsCard() {
         session.topics.map((topic) => ({
           id: `${session.id}-${topic.id}`,
           sessionId: session.id,
+          topicId: topic.id,
           subjectLabel: topic.subjectLabel,
+          subjectColor: topic.subjectColor,
           durationSeconds: topic.duration,
           createdAt: session.createdAt,
         }))
@@ -88,10 +93,21 @@ export function RecentSessionsCard() {
             filteredSessions.map((session) => (
               <Link
                 key={session.id}
-                href={`/session-history?id=${session.sessionId}`}
+                href={buildSessionHistoryEditorHref({
+                  pathname: "/session-history",
+                  searchParams: new URLSearchParams(),
+                  sessionId: session.sessionId,
+                  topicId: session.topicId,
+                })}
                 className="flex items-start justify-between gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-muted/50 -mx-2"
               >
-                <div className="flex-1 min-w-0">
+                <div
+                  className="flex-1 min-w-0 pl-3"
+                  style={{
+                    borderLeftWidth: "4px",
+                    borderLeftColor: session.subjectColor,
+                  }}
+                >
                   <p className="text-sm font-medium truncate">{session.subjectLabel}</p>
                 </div>
                 <div className="flex flex-col items-end shrink-0">

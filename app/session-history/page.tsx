@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { format, isToday, isYesterday, parseISO } from "date-fns"
 import {
   SlidersHorizontal,
@@ -43,6 +44,11 @@ import { Calendar } from "@/components/ui/calendar"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { SessionEditorSheet } from "@/components/session-history/session-editor-sheet"
 import { TEMP_STUDY_SESSIONS } from "@/lib/session-dummy-data"
+import {
+  buildSessionHistoryEditorHref,
+  buildSessionHistoryListHref,
+  parseSessionHistoryEditorRouteState,
+} from "@/lib/session-history-route-state"
 import type { StudySession } from "@/types/session"
 
 // Helper function to format duration
@@ -94,6 +100,10 @@ function cloneStudySessions(sessions: StudySession[]): StudySession[] {
 }
 
 export default function SessionHistoryPage() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
   const [sessions, setSessions] = React.useState<StudySession[]>(() =>
     cloneStudySessions(TEMP_STUDY_SESSIONS)
   )
@@ -109,13 +119,36 @@ export default function SessionHistoryPage() {
     to: new Date(2026, 2, 28),
   })
 
-  // Editor state
-  const [editorOpen, setEditorOpen] = React.useState(false)
-  const [selectedSession, setSelectedSession] = React.useState<StudySession | null>(null)
-  const [initialTopicId, setInitialTopicId] = React.useState<string | null>(null)
-
   const totalRows = 488
   const totalPages = Math.ceil(totalRows / parseInt(rowsPerPage))
+  const routeEditorState = React.useMemo(
+    () => parseSessionHistoryEditorRouteState(searchParams),
+    [searchParams]
+  )
+  const selectedSession = React.useMemo(
+    () =>
+      sessions.find((session) => session.id === routeEditorState.sessionId) ?? null,
+    [routeEditorState.sessionId, sessions]
+  )
+  const initialTopicId = React.useMemo(() => {
+    if (!selectedSession) {
+      return null
+    }
+
+    if (
+      routeEditorState.topicId &&
+      selectedSession.topics.some((topic) => topic.id === routeEditorState.topicId)
+    ) {
+      return routeEditorState.topicId
+    }
+
+    return selectedSession.topics[0]?.id ?? null
+  }, [routeEditorState.topicId, selectedSession])
+  const editorOpen = selectedSession !== null && initialTopicId !== null
+  const currentHref = React.useMemo(() => {
+    const queryString = searchParams.toString()
+    return queryString ? `${pathname}?${queryString}` : pathname
+  }, [pathname, searchParams])
 
   // Group sessions by date for expanded view
   const groupedSessions = React.useMemo(() => groupSessionsByDate(sessions), [sessions])
@@ -124,26 +157,95 @@ export default function SessionHistoryPage() {
     [groupedSessions]
   )
 
+  const replaceRoute = React.useCallback(
+    (nextHref: string) => {
+      if (nextHref !== currentHref) {
+        router.replace(nextHref)
+      }
+    },
+    [currentHref, router]
+  )
+
+  const setEditorRoute = React.useCallback(
+    (sessionId: string, topicId: string) => {
+      replaceRoute(
+        buildSessionHistoryEditorHref({
+          pathname,
+          searchParams,
+          sessionId,
+          topicId,
+        })
+      )
+    },
+    [pathname, replaceRoute, searchParams]
+  )
+
+  const clearEditorRoute = React.useCallback(() => {
+    replaceRoute(
+      buildSessionHistoryListHref({
+        pathname,
+        searchParams,
+      })
+    )
+  }, [pathname, replaceRoute, searchParams])
+
+  React.useEffect(() => {
+    const { sessionId, topicId } = routeEditorState
+
+    if (!sessionId) {
+      if (topicId) {
+        clearEditorRoute()
+      }
+      return
+    }
+
+    if (!selectedSession) {
+      clearEditorRoute()
+      return
+    }
+
+    const fallbackTopicId = selectedSession.topics[0]?.id ?? null
+    if (!fallbackTopicId) {
+      clearEditorRoute()
+      return
+    }
+
+    const hasRequestedTopic =
+      topicId !== null &&
+      selectedSession.topics.some((topic) => topic.id === topicId)
+    const resolvedTopicId = hasRequestedTopic ? topicId : fallbackTopicId
+
+    if (resolvedTopicId !== topicId) {
+      setEditorRoute(selectedSession.id, resolvedTopicId)
+    }
+  }, [clearEditorRoute, routeEditorState, selectedSession, setEditorRoute])
+
   const handleRowClick = (session: StudySession, topicId?: string) => {
-    setSelectedSession(session)
-    setInitialTopicId(topicId ?? session.topics[0]?.id ?? null)
-    setEditorOpen(true)
+    const nextTopicId = topicId ?? session.topics[0]?.id
+    if (!nextTopicId) {
+      return
+    }
+
+    setEditorRoute(session.id, nextTopicId)
   }
 
   const handleSaveSession = (updatedSession: StudySession) => {
-    setSessions((prev) =>
-      prev.map((s) => (s.id === updatedSession.id ? updatedSession : s))
-    )
-    setEditorOpen(false)
-    setSelectedSession(null)
-    setInitialTopicId(null)
+    setSessions((prev) => prev.map((s) => (s.id === updatedSession.id ? updatedSession : s)))
+    clearEditorRoute()
   }
 
   const handleDeleteSession = (sessionId: string) => {
     setSessions((prev) => prev.filter((s) => s.id !== sessionId))
-    setEditorOpen(false)
-    setSelectedSession(null)
-    setInitialTopicId(null)
+
+    if (routeEditorState.sessionId === sessionId) {
+      clearEditorRoute()
+    }
+  }
+
+  const handleEditorOpenChange = (open: boolean) => {
+    if (!open) {
+      clearEditorRoute()
+    }
   }
 
   return (
@@ -451,7 +553,7 @@ export default function SessionHistoryPage() {
         session={selectedSession}
         initialTopicId={initialTopicId}
         open={editorOpen}
-        onOpenChange={setEditorOpen}
+        onOpenChange={handleEditorOpenChange}
         onSave={handleSaveSession}
         onDelete={handleDeleteSession}
       />
