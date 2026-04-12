@@ -56,7 +56,6 @@ import {
   PROTOTYPE_HASHTAGS,
   PROTOTYPE_SUBJECTS,
 } from "@/lib/study-taxonomy"
-import { cn } from "@/lib/utils"
 import type { TagItem } from "@/types/tag"
 import {
   type StudySession,
@@ -266,7 +265,6 @@ export function SessionEditorSheet({
   const startEditTopic = () => {
     if (!selectedTopic) return
 
-    loadTopicIntoForm(selectedTopic)
     setIsAddingTopic(false)
     setIsEditingTopic(true)
   }
@@ -274,8 +272,9 @@ export function SessionEditorSheet({
   const startAddTopic = () => {
     if (!canAddTopic) return
 
+    const nextTopics = commitSelectedTopic(topics)
     const nextSubject = subjects.find(
-      (subject) => !topics.some((topic) => topic.subject === subject.value),
+      (subject) => !nextTopics.some((topic) => topic.subject === subject.value),
     )
 
     if (!nextSubject) return
@@ -290,7 +289,7 @@ export function SessionEditorSheet({
       reflection: "",
     }
 
-    setTopics((prev) => [...prev, draftTopic])
+    setTopics([...nextTopics, draftTopic])
     setSelectedTopicId(draftTopic.id)
     loadTopicIntoForm(draftTopic)
     setIsAddingTopic(true)
@@ -319,7 +318,7 @@ export function SessionEditorSheet({
       setSelectedTopicId(nextTopic?.id ?? null)
       loadTopicIntoForm(nextTopic)
     } else {
-      loadTopicIntoForm(selectedTopic)
+      setEditTopicDuration(durationToParts(selectedTopic?.duration ?? 0))
     }
 
     setIsEditingTopic(false)
@@ -350,7 +349,7 @@ export function SessionEditorSheet({
   const handleSave = () => {
     if (!session || timeError || !selectedTopicId || topicValidationMessage) return
 
-    const nextTopics = isTopicEditable ? commitSelectedTopic(topics) : topics
+    const nextTopics = commitSelectedTopic(topics)
 
     const updatedSession: StudySession = {
       ...session,
@@ -373,7 +372,8 @@ export function SessionEditorSheet({
   const handleTopicSelect = (value: string) => {
     if (value === selectedTopicId || isTopicEditable) return
 
-    const topic = topics.find((item) => item.id === value)
+    const nextTopics = commitSelectedTopic(topics)
+    const topic = nextTopics.find((item) => item.id === value)
 
     if (!topic) return
 
@@ -383,6 +383,7 @@ export function SessionEditorSheet({
 
     setIsTopicLoading(true)
     topicLoadTimeoutRef.current = setTimeout(() => {
+      setTopics(nextTopics)
       setSelectedTopicId(value)
       loadTopicIntoForm(topic)
       setIsTopicLoading(false)
@@ -416,32 +417,28 @@ export function SessionEditorSheet({
                   <Field>
                     <FieldTitle>Subject</FieldTitle>
                     <FieldContent>
-                      <div className={cn(!isTopicEditable && "pointer-events-none opacity-80")}>
-                        <SubjectSelect
-                          subjects={availableSubjects}
-                          hashtags={hashtags}
-                          value={selectedSubject}
-                          onChange={setSelectedSubject}
-                          onSubjectsChange={setSubjects}
-                          onHashtagsChange={setHashtags}
-                        />
-                      </div>
+                      <SubjectSelect
+                        subjects={availableSubjects}
+                        hashtags={hashtags}
+                        value={selectedSubject}
+                        onChange={setSelectedSubject}
+                        onSubjectsChange={setSubjects}
+                        onHashtagsChange={setHashtags}
+                      />
                     </FieldContent>
                   </Field>
 
                   <Field>
                     <FieldTitle>Hashtags</FieldTitle>
                     <FieldContent>
-                      <div className={cn(!isTopicEditable && "pointer-events-none opacity-80")}>
-                        <HashtagMultiSelect
-                          subjects={subjects}
-                          hashtags={hashtags}
-                          value={selectedHashtags}
-                          onChange={setSelectedHashtags}
-                          onSubjectsChange={setSubjects}
-                          onHashtagsChange={setHashtags}
-                        />
-                      </div>
+                      <HashtagMultiSelect
+                        subjects={subjects}
+                        hashtags={hashtags}
+                        value={selectedHashtags}
+                        onChange={setSelectedHashtags}
+                        onSubjectsChange={setSubjects}
+                        onHashtagsChange={setHashtags}
+                      />
                     </FieldContent>
                   </Field>
                 </FieldGroup>
@@ -460,13 +457,11 @@ export function SessionEditorSheet({
                 <h3 className="mb-4 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
                   Reflection
                 </h3>
-                <div className={cn(!isTopicEditable && "pointer-events-none opacity-80")}>
-                  <SessionReflectionField
-                    value={reflection}
-                    onChange={setReflection}
-                    placeholder="Your topic reflection..."
-                  />
-                </div>
+                <SessionReflectionField
+                  value={reflection}
+                  onChange={setReflection}
+                  placeholder="Your topic reflection..."
+                />
               </section>
 
               <Separator />

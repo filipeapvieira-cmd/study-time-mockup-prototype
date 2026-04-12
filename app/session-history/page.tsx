@@ -509,12 +509,16 @@ export default function SessionHistoryPage() {
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         {session.topics.map((topic) => (
-                          <span
-                            key={topic.id}
-                            className="text-sm font-medium leading-tight"
-                          >
-                            {topic.subjectLabel}
-                          </span>
+                          <div key={topic.id} className="flex items-center gap-2">
+                            <span
+                              aria-hidden="true"
+                              className="h-4 w-1 shrink-0 rounded-full"
+                              style={{ backgroundColor: topic.subjectColor }}
+                            />
+                            <span className="text-sm font-medium leading-tight">
+                              {topic.subjectLabel}
+                            </span>
+                          </div>
                         ))}
                       </div>
                     </TableCell>
