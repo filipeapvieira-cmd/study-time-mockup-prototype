@@ -6,7 +6,6 @@ import { format, isToday, isYesterday, parseISO } from "date-fns"
 import {
   SlidersHorizontal,
   Calendar as CalendarIcon,
-  Filter,
   Download,
   ArrowUpDown,
   ChevronLeft,
@@ -16,6 +15,7 @@ import {
   LayoutGrid,
   List,
   Clock,
+  X,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -99,6 +99,20 @@ function cloneStudySessions(sessions: StudySession[]): StudySession[] {
   }))
 }
 
+function sessionMatchesKeyword(session: StudySession, keyword: string): boolean {
+  return session.topics.some((topic) => {
+    if (topic.subjectLabel.toLowerCase().includes(keyword)) {
+      return true
+    }
+
+    if (topic.reflection.toLowerCase().includes(keyword)) {
+      return true
+    }
+
+    return topic.hashtags.some((hashtag) => hashtag.toLowerCase().includes(keyword))
+  })
+}
+
 export default function SessionHistoryPage() {
   const router = useRouter()
   const pathname = usePathname()
@@ -115,12 +129,41 @@ export default function SessionHistoryPage() {
     from: Date | undefined
     to: Date | undefined
   }>({
-    from: new Date(2026, 2, 28),
-    to: new Date(2026, 2, 28),
+    from: undefined,
+    to: undefined,
   })
 
-  const totalRows = 488
-  const totalPages = Math.ceil(totalRows / parseInt(rowsPerPage))
+  const normalizedKeyword = React.useMemo(
+    () => filterValue.trim().toLowerCase(),
+    [filterValue]
+  )
+  const isKeywordFilterActive = normalizedKeyword.length > 0
+  const isDateFilterActive = Boolean(dateRange.from || dateRange.to)
+  const filteredSessions = React.useMemo(() => {
+    const dateFrom = dateRange.from ?? dateRange.to
+    const dateTo = dateRange.to ?? dateRange.from
+    const normalizedFrom = dateFrom ? format(dateFrom, "yyyy-MM-dd") : null
+    const normalizedTo = dateTo ? format(dateTo, "yyyy-MM-dd") : null
+
+    return sessions.filter((session) => {
+      if (isKeywordFilterActive && !sessionMatchesKeyword(session, normalizedKeyword)) {
+        return false
+      }
+
+      if (normalizedFrom && session.date < normalizedFrom) {
+        return false
+      }
+
+      if (normalizedTo && session.date > normalizedTo) {
+        return false
+      }
+
+      return true
+    })
+  }, [dateRange.from, dateRange.to, isKeywordFilterActive, normalizedKeyword, sessions])
+  const rowsPerPageValue = Number.parseInt(rowsPerPage, 10)
+  const totalRows = filteredSessions.length
+  const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPageValue))
   const routeEditorState = React.useMemo(
     () => parseSessionHistoryEditorRouteState(searchParams),
     [searchParams]
@@ -151,7 +194,10 @@ export default function SessionHistoryPage() {
   }, [pathname, searchParams])
 
   // Group sessions by date for expanded view
-  const groupedSessions = React.useMemo(() => groupSessionsByDate(sessions), [sessions])
+  const groupedSessions = React.useMemo(
+    () => groupSessionsByDate(filteredSessions),
+    [filteredSessions]
+  )
   const sortedDates = React.useMemo(
     () => Object.keys(groupedSessions).sort((a, b) => b.localeCompare(a)),
     [groupedSessions]
@@ -188,6 +234,10 @@ export default function SessionHistoryPage() {
       })
     )
   }, [pathname, replaceRoute, searchParams])
+
+  React.useEffect(() => {
+    setCurrentPage((previousPage) => Math.min(previousPage, totalPages))
+  }, [totalPages])
 
   React.useEffect(() => {
     const { sessionId, topicId } = routeEditorState
@@ -279,12 +329,26 @@ export default function SessionHistoryPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="size-4 shrink-0" />
-            <Input
-              placeholder="Filter..."
-              value={filterValue}
-              onChange={(e) => setFilterValue(e.target.value)}
-              className="w-full text-sm font-medium placeholder:font-normal sm:w-[200px]"
-            />
+            <div className="relative w-full sm:w-[200px]">
+              <Input
+                placeholder="Filter..."
+                value={filterValue}
+                onChange={(e) => setFilterValue(e.target.value)}
+                className={`w-full text-sm font-medium placeholder:font-normal ${isKeywordFilterActive ? "pr-9" : ""}`}
+              />
+              {isKeywordFilterActive ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-1/2 right-1 size-7 -translate-y-1/2"
+                  onClick={() => setFilterValue("")}
+                  aria-label="Clear keyword filter"
+                >
+                  <X className="size-4" />
+                </Button>
+              ) : null}
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {/* Mobile View Toggle */}
@@ -301,36 +365,51 @@ export default function SessionHistoryPage() {
                 <LayoutGrid className="size-4" />
               </ToggleGroupItem>
             </ToggleGroup>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="flex-1 gap-2 sm:flex-none">
-                  <CalendarIcon className="size-4 shrink-0" />
-                  <span className="truncate">
-                    {dateRange.from && dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "MMM dd, yyyy")} -{" "}
-                        {format(dateRange.to, "MMM dd, yyyy")}
-                      </>
-                    ) : (
-                      "Select date range"
-                    )}
-                  </span>
+            <div className="flex flex-1 items-center gap-2 sm:flex-none">
+              {isDateFilterActive ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => setDateRange({ from: undefined, to: undefined })}
+                  aria-label="Clear date filter"
+                >
+                  <X className="size-4" />
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="range"
-                  selected={dateRange}
-                  onSelect={(range) =>
-                    setDateRange({ from: range?.from, to: range?.to })
-                  }
-                  numberOfMonths={1}
-                />
-              </PopoverContent>
-            </Popover>
-            <Button variant="ghost" size="icon" className="shrink-0">
-              <Filter className="size-4" />
-            </Button>
+              ) : null}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="flex-1 gap-2 sm:flex-none">
+                    <CalendarIcon className="size-4 shrink-0" />
+                    <span className="truncate">
+                      {dateRange.from ? (
+                        dateRange.to ? (
+                          <>
+                            {format(dateRange.from, "MMM dd, yyyy")} -{" "}
+                            {format(dateRange.to, "MMM dd, yyyy")}
+                          </>
+                        ) : (
+                          format(dateRange.from, "MMM dd, yyyy")
+                        )
+                      ) : (
+                        "Select date range"
+                      )}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={(range) =>
+                      setDateRange({ from: range?.from, to: range?.to })
+                    }
+                    numberOfMonths={1}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
             <Button variant="ghost" size="icon" className="shrink-0">
               <Download className="size-4" />
             </Button>
@@ -360,7 +439,7 @@ export default function SessionHistoryPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sessions.map((session) => (
+                {filteredSessions.map((session) => (
                   <TableRow
                     key={session.id}
                     className="cursor-pointer hover:bg-muted/50"
