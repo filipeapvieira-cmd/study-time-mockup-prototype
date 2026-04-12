@@ -7,6 +7,7 @@ import {
   SlidersHorizontal,
   Calendar as CalendarIcon,
   Download,
+  Loader2,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
@@ -44,6 +45,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { SessionEditorSheet } from "@/components/session-history/session-editor-sheet"
 import { TEMP_STUDY_SESSIONS } from "@/lib/session-dummy-data"
+import { buildSessionHistoryPdf } from "@/lib/session-history-pdf"
 import {
   buildSessionHistoryEditorHref,
   buildSessionHistoryListHref,
@@ -125,6 +127,7 @@ export default function SessionHistoryPage() {
   const [rowsPerPage, setRowsPerPage] = React.useState("10")
   const [currentPage, setCurrentPage] = React.useState(1)
   const [viewMode, setViewMode] = React.useState<"compact" | "expanded">("compact")
+  const [isExporting, setIsExporting] = React.useState(false)
   const [dateRange, setDateRange] = React.useState<{
     from: Date | undefined
     to: Date | undefined
@@ -133,12 +136,14 @@ export default function SessionHistoryPage() {
     to: undefined,
   })
 
+  const keywordFilterDisplayValue = React.useMemo(() => filterValue.trim(), [filterValue])
   const normalizedKeyword = React.useMemo(
-    () => filterValue.trim().toLowerCase(),
-    [filterValue]
+    () => keywordFilterDisplayValue.toLowerCase(),
+    [keywordFilterDisplayValue]
   )
   const isKeywordFilterActive = normalizedKeyword.length > 0
   const isDateFilterActive = Boolean(dateRange.from || dateRange.to)
+  const hasActiveFilters = isKeywordFilterActive || isDateFilterActive
   const filteredSessions = React.useMemo(() => {
     const dateFrom = dateRange.from ?? dateRange.to
     const dateTo = dateRange.to ?? dateRange.from
@@ -298,6 +303,59 @@ export default function SessionHistoryPage() {
     }
   }
 
+  const noSessionsToExport = filteredSessions.length === 0
+  const exportButtonLabel = hasActiveFilters
+    ? "Download filtered sessions PDF"
+    : "Download all sessions PDF"
+  const exportButtonTitle = isExporting
+    ? "Generating session history PDF"
+    : noSessionsToExport
+      ? "No sessions to export"
+      : exportButtonLabel
+
+  const handleExportPdf = React.useCallback(async () => {
+    if (isExporting || noSessionsToExport) {
+      return
+    }
+
+    setIsExporting(true)
+
+    try {
+      const { jsPDF } = await import("jspdf/dist/jspdf.es.min.js")
+      const normalizedDateFrom = dateRange.from ?? dateRange.to
+      const normalizedDateTo = dateRange.to ?? dateRange.from
+
+      const { doc, filename } = buildSessionHistoryPdf(
+        {
+          sessions: filteredSessions,
+          generatedAt: new Date(),
+          filter: {
+            hasActiveFilters,
+            keyword: isKeywordFilterActive ? keywordFilterDisplayValue : null,
+            dateFrom: normalizedDateFrom
+              ? format(normalizedDateFrom, "yyyy-MM-dd")
+              : null,
+            dateTo: normalizedDateTo ? format(normalizedDateTo, "yyyy-MM-dd") : null,
+          },
+        },
+        jsPDF
+      )
+
+      doc.save(filename)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [
+    dateRange.from,
+    dateRange.to,
+    filteredSessions,
+    hasActiveFilters,
+    isExporting,
+    isKeywordFilterActive,
+    keywordFilterDisplayValue,
+    noSessionsToExport,
+  ])
+
   return (
     <div className="flex min-h-full flex-col gap-6 p-4 md:p-6">
       {/* Header */}
@@ -409,10 +467,22 @@ export default function SessionHistoryPage() {
                   />
                 </PopoverContent>
               </Popover>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                onClick={handleExportPdf}
+                disabled={isExporting || noSessionsToExport}
+                aria-label={exportButtonTitle}
+                title={exportButtonTitle}
+              >
+                {isExporting ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Download className="size-4" />
+                )}
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" className="shrink-0">
-              <Download className="size-4" />
-            </Button>
           </div>
         </div>
 
