@@ -83,7 +83,7 @@ export function HashtagMultiSelect({
       role="combobox"
       aria-expanded={open}
       className={cn(
-        "h-10 w-full justify-between rounded-md border-muted-foreground bg-background font-normal text-foreground shadow-sm transition-shadow hover:bg-background hover:shadow-md",
+        "h-10 w-full justify-between rounded-md font-normal",
         className,
       )}
     >

@@ -197,7 +197,7 @@ export function SessionPanel() {
           <Button
             onClick={handleSessionPrimaryAction}
             variant={isSessionPlaying ? "outline" : "default"}
-            className="h-9 w-full gap-2 rounded-md border-muted-foreground/40 text-sm font-medium shadow-sm"
+            className="h-9 w-full gap-2 rounded-md border-input text-sm font-medium shadow-sm"
           >
             {isSessionPlaying ? (
               <>
@@ -218,7 +218,7 @@ export function SessionPanel() {
               variant="outline"
               size="icon-sm"
               onClick={resetTimer}
-              className="rounded-md border-muted-foreground/40 bg-background text-foreground shadow-xs transition-colors hover:bg-accent hover:text-foreground"
+              className="rounded-md border-input bg-background text-foreground shadow-xs transition-colors hover:bg-accent hover:text-foreground"
               title="Reset timer"
             >
               <RotateCcw className="size-4" />
@@ -227,7 +227,7 @@ export function SessionPanel() {
               variant="outline"
               size="icon-sm"
               onClick={stopSession}
-              className="rounded-md border-muted-foreground/40 bg-background text-foreground shadow-xs transition-colors hover:bg-accent hover:text-foreground"
+              className="rounded-md border-input bg-background text-foreground shadow-xs transition-colors hover:bg-accent hover:text-foreground"
               title="Stop session"
             >
               <Square className="size-4" />
@@ -236,7 +236,7 @@ export function SessionPanel() {
               variant="outline"
               size="icon-sm"
               onClick={saveSession}
-              className="rounded-md border-muted-foreground/40 bg-background text-foreground shadow-xs transition-colors hover:bg-accent hover:text-foreground"
+              className="rounded-md border-input bg-background text-foreground shadow-xs transition-colors hover:bg-accent hover:text-foreground"
               title="Save session"
             >
               <Save className="size-4" />
@@ -260,7 +260,7 @@ export function SessionPanel() {
               value={activeTopic?.id}
               onValueChange={(value) => setActiveTopic(value)}
             >
-              <SelectTrigger className="min-w-0 flex-1 rounded-md border-muted-foreground bg-background text-foreground shadow-xs">
+              <SelectTrigger className="min-w-0 flex-1 rounded-md border-input bg-background text-foreground shadow-xs">
                 <SelectValue placeholder={`Select ${TOPIC_LABEL.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
@@ -274,7 +274,7 @@ export function SessionPanel() {
             <Button
               variant="outline"
               size="icon"
-              className="shrink-0 rounded-md border-muted-foreground bg-background text-foreground shadow-xs hover:bg-accent"
+              className="shrink-0 rounded-md border-input bg-background text-foreground shadow-xs hover:bg-accent"
               onClick={addTopic}
               title="Add new topic"
             >
@@ -284,7 +284,7 @@ export function SessionPanel() {
 
           {/* Selected Topic Card */}
           {activeTopic && (
-            <div className="overflow-hidden rounded-lg border border-muted-foreground bg-card shadow-xs">
+            <div className="overflow-hidden rounded-lg border border-border bg-card shadow-xs">
               <div className="p-3">
                 {editingTopicId === activeTopic.id ? (
                   /* Editing Mode */
@@ -292,7 +292,7 @@ export function SessionPanel() {
                     <Input
                       value={editingTitle}
                       onChange={(e) => setEditingTitle(e.target.value)}
-                      className="h-8 flex-1 rounded-md border-muted-foreground bg-background text-sm text-foreground shadow-xs"
+                      className="h-8 flex-1 rounded-md border-input bg-background text-sm text-foreground shadow-xs"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === "Enter") saveTopicTitle()
@@ -350,7 +350,7 @@ export function SessionPanel() {
                   variant="outline"
                   onClick={() => toggleTopicTimer(activeTopic.id)}
                   disabled={!isSessionPlaying}
-                  className="mt-3 h-auto w-full justify-between rounded-md border-muted-foreground bg-muted px-3 py-2 text-foreground shadow-none hover:bg-background hover:text-foreground disabled:bg-muted disabled:text-foreground disabled:opacity-60"
+                  className="mt-3 h-auto w-full justify-between rounded-md border-input bg-muted px-3 py-2 text-foreground shadow-none hover:bg-background hover:text-foreground disabled:bg-muted disabled:text-foreground disabled:opacity-60"
                   title={activeTopic.isRunning ? "Pause topic timer" : "Start topic timer"}
                   aria-label={activeTopic.isRunning ? "Pause topic timer" : "Start topic timer"}
                   aria-pressed={activeTopic.isRunning}

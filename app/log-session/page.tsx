@@ -65,9 +65,9 @@ export default function LogSessionPage() {
             textareaClassName="h-full min-h-[300px]"
             footer={
               <Button
-                variant="outline"
+                variant="default"
                 size="sm"
-                className="gap-2 rounded-md border-border/80 bg-background text-foreground shadow-sm hover:bg-muted"
+                className="gap-2 rounded-md shadow-sm"
                 onClick={() => setAiSheetOpen(true)}
               >
                 <MessageSquareText className="size-4" />
