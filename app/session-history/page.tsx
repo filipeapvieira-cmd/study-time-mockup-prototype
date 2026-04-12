@@ -42,16 +42,30 @@ import {
 import { Calendar } from "@/components/ui/calendar"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { SessionEditorSheet } from "@/components/session-history/session-editor-sheet"
+import { getTagItemByValue, PROTOTYPE_SUBJECTS } from "@/lib/study-taxonomy"
 import type { StudySession } from "@/types/session"
 
-// Sample session data with full StudySession structure
+type SampleSessionConfig = Omit<StudySession, "subjectColor" | "subjectLabel">
+
+function createSampleSession(session: SampleSessionConfig): StudySession {
+  const subject = getTagItemByValue(PROTOTYPE_SUBJECTS, session.subject)
+
+  if (!subject) {
+    throw new Error(`Unknown prototype subject: ${session.subject}`)
+  }
+
+  return {
+    ...session,
+    subjectLabel: subject.label,
+    subjectColor: subject.color,
+  }
+}
+
 const sampleSessions: StudySession[] = [
-  {
+  createSampleSession({
     id: "1",
-    subject: "user-experience-design",
-    subjectLabel: "UI109007: User experience design",
-    subjectColor: "#ec4899",
-    hashtags: ["ux-design", "research"],
+    subject: "computer-science",
+    hashtags: ["research"],
     reflection: "Today I focused on understanding the fundamentals of user research methodologies. I learned about different interview techniques and how to synthesize qualitative data effectively.",
     feelings: "Motivated",
     date: "2026-03-28",
@@ -66,12 +80,10 @@ const sampleSessions: StudySession[] = [
     ],
     createdAt: "2026-03-28T14:00:00Z",
     updatedAt: "2026-03-28T14:49:00Z",
-  },
-  {
+  }),
+  createSampleSession({
     id: "2",
     subject: "theoretical-physics",
-    subjectLabel: "Theoretical Physics",
-    subjectColor: "#14b8a6",
     hashtags: ["quantum"],
     reflection: "Deep dive into wave-particle duality. Finally wrapping my head around the core concepts.",
     feelings: "Challenged",
@@ -86,12 +98,10 @@ const sampleSessions: StudySession[] = [
     ],
     createdAt: "2026-03-28T09:00:00Z",
     updatedAt: "2026-03-28T10:36:00Z",
-  },
-  {
+  }),
+  createSampleSession({
     id: "3",
     subject: "mathematics",
-    subjectLabel: "Mathematics",
-    subjectColor: "#8b5cf6",
     hashtags: ["calculus"],
     reflection: "Practiced integration by parts. Needed more time on the tricky trigonometric substitutions.",
     feelings: "Focused",
@@ -106,12 +116,10 @@ const sampleSessions: StudySession[] = [
     ],
     createdAt: "2026-03-27T16:00:00Z",
     updatedAt: "2026-03-27T17:11:00Z",
-  },
-  {
+  }),
+  createSampleSession({
     id: "4",
     subject: "computer-science",
-    subjectLabel: "Computer Science",
-    subjectColor: "#3b82f6",
     hashtags: ["algorithms"],
     reflection: "",
     feelings: "",
@@ -123,12 +131,10 @@ const sampleSessions: StudySession[] = [
     topics: [],
     createdAt: "2026-03-25T11:00:00Z",
     updatedAt: "2026-03-25T12:25:00Z",
-  },
-  {
+  }),
+  createSampleSession({
     id: "5",
-    subject: "user-experience-design",
-    subjectLabel: "UI109007: User experience design",
-    subjectColor: "#ec4899",
+    subject: "literature",
     hashtags: [],
     reflection: "",
     feelings: "",
@@ -140,12 +146,10 @@ const sampleSessions: StudySession[] = [
     topics: [],
     createdAt: "2026-03-23T10:00:00Z",
     updatedAt: "2026-03-23T11:15:00Z",
-  },
-  {
+  }),
+  createSampleSession({
     id: "6",
-    subject: "user-experience-design",
-    subjectLabel: "UI109007: User experience design",
-    subjectColor: "#ec4899",
+    subject: "chemistry",
     hashtags: [],
     reflection: "",
     feelings: "",
@@ -157,12 +161,10 @@ const sampleSessions: StudySession[] = [
     topics: [],
     createdAt: "2026-03-22T14:00:00Z",
     updatedAt: "2026-03-22T15:29:00Z",
-  },
-  {
+  }),
+  createSampleSession({
     id: "7",
-    subject: "user-experience-design",
-    subjectLabel: "UI109007: User experience design",
-    subjectColor: "#ec4899",
+    subject: "biology",
     hashtags: [],
     reflection: "",
     feelings: "",
@@ -174,12 +176,10 @@ const sampleSessions: StudySession[] = [
     topics: [],
     createdAt: "2026-03-22T09:00:00Z",
     updatedAt: "2026-03-22T11:07:00Z",
-  },
-  {
+  }),
+  createSampleSession({
     id: "8",
-    subject: "user-experience-design",
-    subjectLabel: "UI109007: User experience design",
-    subjectColor: "#ec4899",
+    subject: "history",
     hashtags: [],
     reflection: "",
     feelings: "",
@@ -191,13 +191,11 @@ const sampleSessions: StudySession[] = [
     topics: [],
     createdAt: "2026-03-21T15:00:00Z",
     updatedAt: "2026-03-21T16:03:00Z",
-  },
-  {
+  }),
+  createSampleSession({
     id: "9",
-    subject: "user-experience-design",
-    subjectLabel: "UI109007: User experience design",
-    subjectColor: "#ec4899",
-    hashtags: [],
+    subject: "computer-science",
+    hashtags: ["research"],
     reflection: "Very productive session today. Made significant progress on the user persona development.",
     feelings: "Very good",
     date: "2026-03-21",
@@ -211,12 +209,10 @@ const sampleSessions: StudySession[] = [
     ],
     createdAt: "2026-03-21T10:00:00Z",
     updatedAt: "2026-03-21T10:52:00Z",
-  },
-  {
+  }),
+  createSampleSession({
     id: "10",
-    subject: "user-experience-design",
-    subjectLabel: "UI109007: User experience design",
-    subjectColor: "#ec4899",
+    subject: "literature",
     hashtags: [],
     reflection: "",
     feelings: "",
@@ -228,7 +224,7 @@ const sampleSessions: StudySession[] = [
     topics: [],
     createdAt: "2026-03-18T13:00:00Z",
     updatedAt: "2026-03-18T14:07:00Z",
-  },
+  }),
 ]
 
 // Helper function to format duration

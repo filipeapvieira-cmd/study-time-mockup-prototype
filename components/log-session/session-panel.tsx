@@ -16,6 +16,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
 } from "@/components/ui/sidebar"
+import { SESSION_TIMER_LABEL, TOPIC_LABEL } from "@/lib/session-labels"
 
 interface Topic {
   id: string
@@ -118,7 +119,7 @@ export function SessionPanel() {
   const addTopic = () => {
     const newTopic: Topic = {
       id: Date.now().toString(),
-      title: `Topic ${topics.length + 1}`,
+      title: `${TOPIC_LABEL} ${topics.length + 1}`,
       time: 0,
       isActive: false,
       isRunning: false,
@@ -173,7 +174,7 @@ export function SessionPanel() {
       {/* Session Timer Group */}
       <SidebarGroup className="px-3 py-2">
         <SidebarGroupLabel className="mb-3 px-0 text-[10px] font-semibold uppercase tracking-widest text-foreground group-data-[collapsible=icon]:hidden">
-          Session Timer
+          {SESSION_TIMER_LABEL}
         </SidebarGroupLabel>
         <SidebarGroupContent className="space-y-4">
           {/* Timer Display Card */}
@@ -250,7 +251,7 @@ export function SessionPanel() {
       {/* Topic Group */}
       <SidebarGroup className="flex-1 px-3 py-2">
         <SidebarGroupLabel className="mb-3 px-0 text-[10px] font-semibold uppercase tracking-widest text-foreground group-data-[collapsible=icon]:hidden">
-          Topic
+          {TOPIC_LABEL}
         </SidebarGroupLabel>
         <SidebarGroupContent className="space-y-3">
           {/* Topic Selector Row */}
@@ -260,7 +261,7 @@ export function SessionPanel() {
               onValueChange={(value) => setActiveTopic(value)}
             >
               <SelectTrigger className="min-w-0 flex-1 rounded-md border-muted-foreground bg-background text-foreground shadow-xs">
-                <SelectValue placeholder="Select topic" />
+                <SelectValue placeholder={`Select ${TOPIC_LABEL.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
                 {topics.map((topic) => (

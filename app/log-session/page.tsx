@@ -1,438 +1,83 @@
 "use client";
 
 import React from "react";
-import {
-  Book,
-  Hash,
-  Check,
-  ChevronDown,
-  X,
-  MessageSquareText,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MessageSquareText } from "lucide-react";
+
 import { AIQuestionsSheet } from "@/components/log-session/ai-questions-sheet";
+import { HashtagMultiSelect } from "@/components/session-fields/hashtag-multi-select";
+import { SessionReflectionField } from "@/components/session-fields/session-reflection-field";
+import { SubjectSelect } from "@/components/session-fields/subject-select";
+import { Button } from "@/components/ui/button";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { TagManager, type TagItem } from "@/components/log-session/tag-manager";
-
-const defaultSubjects: TagItem[] = [
-  {
-    id: "1",
-    value: "theoretical-physics",
-    label: "Theoretical Physics",
-    color: "#3b82f6",
-  },
-  { id: "2", value: "mathematics", label: "Mathematics", color: "#8b5cf6" },
-  {
-    id: "3",
-    value: "computer-science",
-    label: "Computer Science",
-    color: "#22c55e",
-  },
-  { id: "4", value: "literature", label: "Literature", color: "#f97316" },
-  { id: "5", value: "chemistry", label: "Chemistry", color: "#ef4444" },
-  { id: "6", value: "biology", label: "Biology", color: "#14b8a6" },
-  { id: "7", value: "history", label: "History", color: "#eab308" },
-];
-
-const defaultHashtags: TagItem[] = [
-  { id: "1", value: "quantum", label: "#quantum", color: "#3b82f6" },
-  { id: "2", value: "mechanics", label: "#mechanics", color: "#8b5cf6" },
-  { id: "3", value: "algebra", label: "#algebra", color: "#22c55e" },
-  { id: "4", value: "calculus", label: "#calculus", color: "#f97316" },
-  { id: "5", value: "algorithms", label: "#algorithms", color: "#ef4444" },
-  {
-    id: "6",
-    value: "data-structures",
-    label: "#data-structures",
-    color: "#14b8a6",
-  },
-  { id: "7", value: "philosophy", label: "#philosophy", color: "#eab308" },
-  { id: "8", value: "research", label: "#research", color: "#ec4899" },
-];
+  cloneTagItems,
+  PROTOTYPE_HASHTAGS,
+  PROTOTYPE_SUBJECTS,
+} from "@/lib/study-taxonomy";
+import type { TagItem } from "@/types/tag";
 
 export default function LogSessionPage() {
-  const [subjectOpen, setSubjectOpen] = React.useState(false);
   const [selectedSubject, setSelectedSubject] = React.useState("");
-  const [hashtagsOpen, setHashtagsOpen] = React.useState(false);
-  const [hashtagsHoverOpen, setHashtagsHoverOpen] = React.useState(false);
   const [selectedHashtags, setSelectedHashtags] = React.useState<string[]>([]);
   const [content, setContent] = React.useState("");
-
-  const [subjects, setSubjects] = React.useState<TagItem[]>(defaultSubjects);
-  const [hashtags, setHashtags] = React.useState<TagItem[]>(defaultHashtags);
-  const [aiSheetOpen, setAiSheetOpen] = React.useState(false);
-
-  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
-
-  const toggleHashtag = (value: string) => {
-    setSelectedHashtags((current) =>
-      current.includes(value)
-        ? current.filter((item) => item !== value)
-        : [...current, value],
-    );
-  };
-
-  const removeHashtag = (value: string) => {
-    setSelectedHashtags((current) => current.filter((item) => item !== value));
-  };
-
-  const hasSelectedHashtags = selectedHashtags.length > 0;
-
-  const handleHashtagsOpenChange = (open: boolean) => {
-    setHashtagsOpen(open);
-
-    if (open) {
-      setHashtagsHoverOpen(false);
-    }
-  };
-
-  const hashtagsSelectButton = (
-    <Button
-      variant="outline"
-      role="combobox"
-      aria-expanded={hashtagsOpen}
-      className="h-10 w-full justify-between rounded-md border-muted-foreground bg-background font-normal text-foreground shadow-sm transition-shadow hover:bg-background hover:shadow-md"
-    >
-      <div className="flex items-center gap-2.5">
-        <Hash className="size-4 shrink-0 text-muted-foreground" />
-        <span
-          className={
-            hasSelectedHashtags ? "" : "text-muted-foreground"
-          }
-        >
-          {hasSelectedHashtags
-            ? `${selectedHashtags.length} tag${selectedHashtags.length > 1 ? "s" : ""} selected`
-            : "Add tags..."}
-        </span>
-      </div>
-      <ChevronDown className="ml-2 size-4 shrink-0 opacity-40" />
-    </Button>
+  const [subjects, setSubjects] = React.useState<TagItem[]>(() =>
+    cloneTagItems(PROTOTYPE_SUBJECTS),
   );
+  const [hashtags, setHashtags] = React.useState<TagItem[]>(() =>
+    cloneTagItems(PROTOTYPE_HASHTAGS),
+  );
+  const [aiSheetOpen, setAiSheetOpen] = React.useState(false);
 
   return (
     <div className="flex h-full flex-col">
-      {/* Content Container */}
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-6 md:px-10 md:py-8">
-        {/* Metadata Section */}
         <div className="space-y-4">
-          {/* Selectors Row */}
           <div className="grid gap-3 sm:grid-cols-2">
-            {/* Subject Selector */}
             <div>
-              <Popover open={subjectOpen} onOpenChange={setSubjectOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={subjectOpen}
-                    className="h-10 w-full justify-between rounded-md border-muted-foreground bg-background font-normal text-foreground shadow-sm transition-shadow hover:bg-background hover:shadow-md"
-                  >
-                    <div className="flex items-center gap-2.5 overflow-hidden">
-                      {selectedSubject ? (
-                        <>
-                          <div
-                            className="size-2.5 shrink-0 rounded-full"
-                            style={{
-                              backgroundColor: subjects.find(
-                                (s) => s.value === selectedSubject,
-                              )?.color,
-                            }}
-                          />
-                          <span className="truncate">
-                            {
-                              subjects.find((s) => s.value === selectedSubject)
-                                ?.label
-                            }
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <Book className="size-4 shrink-0 text-muted-foreground" />
-                          <span className="text-muted-foreground">
-                            Select subject...
-                          </span>
-                        </>
-                      )}
-                    </div>
-                    <ChevronDown className="ml-2 size-4 shrink-0 opacity-40" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <div className="flex items-center border-b">
-                      <CommandInput
-                        placeholder="Search subject..."
-                        className="flex-1"
-                      />
-                      <div className="pr-1">
-                        <TagManager
-                          subjects={subjects}
-                          hashtags={hashtags}
-                          onSubjectsChange={setSubjects}
-                          onHashtagsChange={setHashtags}
-                          initialTab="subjects"
-                        />
-                      </div>
-                    </div>
-                    <CommandList>
-                      <CommandEmpty>No subject found.</CommandEmpty>
-                      <CommandGroup>
-                        {subjects.map((subject) => (
-                          <CommandItem
-                            key={subject.id}
-                            value={subject.value}
-                            onSelect={(value) => {
-                              setSelectedSubject(
-                                value === selectedSubject ? "" : value,
-                              );
-                              setSubjectOpen(false);
-                            }}
-                          >
-                            <div
-                              className="mr-2 size-2.5 shrink-0 rounded-full"
-                              style={{ backgroundColor: subject.color }}
-                            />
-                            <Check
-                              className={cn(
-                                "mr-2 size-4",
-                                selectedSubject === subject.value
-                                  ? "opacity-100"
-                                  : "opacity-0",
-                              )}
-                            />
-                            {subject.label}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <SubjectSelect
+                subjects={subjects}
+                hashtags={hashtags}
+                value={selectedSubject}
+                onChange={setSelectedSubject}
+                onSubjectsChange={setSubjects}
+                onHashtagsChange={setHashtags}
+              />
             </div>
 
-            {/* Hashtags Selector */}
             <div>
-              {hasSelectedHashtags ? (
-                <HoverCard
-                  open={
-                    hasSelectedHashtags && !hashtagsOpen && hashtagsHoverOpen
-                  }
-                  onOpenChange={(open) =>
-                    setHashtagsHoverOpen(
-                      open && hasSelectedHashtags && !hashtagsOpen,
-                    )
-                  }
-                  openDelay={120}
-                  closeDelay={100}
-                >
-                  <HoverCardTrigger asChild>
-                    <div className="w-full">
-                      <Popover
-                        open={hashtagsOpen}
-                        onOpenChange={handleHashtagsOpenChange}
-                      >
-                        <PopoverTrigger asChild>
-                          {hashtagsSelectButton}
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                          <Command>
-                            <div className="flex items-center border-b">
-                              <CommandInput
-                                placeholder="Search tags..."
-                                className="flex-1"
-                              />
-                              <div className="pr-1">
-                                <TagManager
-                                  subjects={subjects}
-                                  hashtags={hashtags}
-                                  onSubjectsChange={setSubjects}
-                                  onHashtagsChange={setHashtags}
-                                  initialTab="hashtags"
-                                />
-                              </div>
-                            </div>
-                            <CommandList>
-                              <CommandEmpty>No tag found.</CommandEmpty>
-                              <CommandGroup>
-                                {hashtags.map((hashtag) => (
-                                  <CommandItem
-                                    key={hashtag.id}
-                                    value={hashtag.value}
-                                    onSelect={() => toggleHashtag(hashtag.value)}
-                                  >
-                                    <div
-                                      className="mr-2 size-2.5 shrink-0 rounded-full"
-                                      style={{ backgroundColor: hashtag.color }}
-                                    />
-                                    <Check
-                                      className={cn(
-                                        "mr-2 size-4",
-                                        selectedHashtags.includes(hashtag.value)
-                                          ? "opacity-100"
-                                          : "opacity-0",
-                                      )}
-                                    />
-                                    {hashtag.label}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </HoverCardTrigger>
-                  <HoverCardContent
-                    align="start"
-                    className="w-72 max-w-[calc(100vw-2rem)]"
-                  >
-                    <div className="flex flex-col gap-3">
-                      <p className="text-sm font-medium text-foreground">
-                        Selected hashtags
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedHashtags.map((tagValue) => {
-                          const tag = hashtags.find((h) => h.value === tagValue);
-                          const label = tag?.label || `#${tagValue}`;
-
-                          return (
-                            <Badge
-                              key={tagValue}
-                              variant="outline"
-                              className="gap-1.5 border-transparent pr-1 shadow-none"
-                              style={{
-                                backgroundColor: tag?.color
-                                  ? `${tag.color}15`
-                                  : undefined,
-                                color: tag?.color,
-                              }}
-                            >
-                              <span className="truncate">{label}</span>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  removeHashtag(tagValue);
-                                }}
-                                className="rounded-full p-0.5 transition-colors hover:bg-foreground/10"
-                                aria-label={`Remove ${label}`}
-                              >
-                                <X className="size-3" />
-                              </button>
-                            </Badge>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </HoverCardContent>
-                </HoverCard>
-              ) : (
-                <Popover
-                  open={hashtagsOpen}
-                  onOpenChange={handleHashtagsOpenChange}
-                >
-                  <PopoverTrigger asChild>{hashtagsSelectButton}</PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                    <Command>
-                      <div className="flex items-center border-b">
-                        <CommandInput
-                          placeholder="Search tags..."
-                          className="flex-1"
-                        />
-                        <div className="pr-1">
-                          <TagManager
-                            subjects={subjects}
-                            hashtags={hashtags}
-                            onSubjectsChange={setSubjects}
-                            onHashtagsChange={setHashtags}
-                            initialTab="hashtags"
-                          />
-                        </div>
-                      </div>
-                      <CommandList>
-                        <CommandEmpty>No tag found.</CommandEmpty>
-                        <CommandGroup>
-                          {hashtags.map((hashtag) => (
-                            <CommandItem
-                              key={hashtag.id}
-                              value={hashtag.value}
-                              onSelect={() => toggleHashtag(hashtag.value)}
-                            >
-                              <div
-                                className="mr-2 size-2.5 shrink-0 rounded-full"
-                                style={{ backgroundColor: hashtag.color }}
-                              />
-                              <Check
-                                className={cn(
-                                  "mr-2 size-4",
-                                  selectedHashtags.includes(hashtag.value)
-                                    ? "opacity-100"
-                                    : "opacity-0",
-                                )}
-                              />
-                              {hashtag.label}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              )}
+              <HashtagMultiSelect
+                subjects={subjects}
+                hashtags={hashtags}
+                value={selectedHashtags}
+                onChange={setSelectedHashtags}
+                onSubjectsChange={setSubjects}
+                onHashtagsChange={setHashtags}
+              />
             </div>
           </div>
         </div>
 
-        {/* Writing Area */}
         <div className="mt-8 flex flex-1 flex-col">
-          <div className="relative flex-1">
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Begin your reflection here. What did you learn? What challenged you? What connections did you make?"
-              className="h-full min-h-[300px] w-full resize-none rounded-lg border-0 bg-muted/30 px-5 py-4 text-base leading-relaxed placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/20"
-            />
-          </div>
-
-          {/* Footer */}
-          <div className="mt-4 flex items-center justify-between">
-            <span className="text-xs font-medium text-foreground/90">
-              {wordCount} {wordCount === 1 ? "word" : "words"}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 rounded-md border-border/80 bg-background text-foreground shadow-sm hover:bg-muted"
-              onClick={() => setAiSheetOpen(true)}
-            >
-              <MessageSquareText className="size-4" />
-              <span className="hidden sm:inline">AI Prompts</span>
-            </Button>
-          </div>
+          <SessionReflectionField
+            value={content}
+            onChange={setContent}
+            placeholder="Begin your reflection here. What did you learn? What challenged you? What connections did you make?"
+            className="flex-1"
+            textareaClassName="h-full min-h-[300px]"
+            footer={
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 rounded-md border-border/80 bg-background text-foreground shadow-sm hover:bg-muted"
+                onClick={() => setAiSheetOpen(true)}
+              >
+                <MessageSquareText className="size-4" />
+                <span className="hidden sm:inline">AI Prompts</span>
+              </Button>
+            }
+          />
         </div>
       </div>
 
-      {/* AI Questions Sheet */}
       <AIQuestionsSheet open={aiSheetOpen} onOpenChange={setAiSheetOpen} />
     </div>
   );

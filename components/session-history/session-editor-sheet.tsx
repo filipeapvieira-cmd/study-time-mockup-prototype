@@ -2,11 +2,9 @@
 
 import * as React from "react"
 import {
-  Book,
-  Hash,
   Check,
-  ChevronDown,
   X,
+  AlertTriangle,
   Clock,
   Pause,
   Play,
@@ -14,8 +12,11 @@ import {
   Pencil,
   Trash2,
   Save,
-  AlertTriangle,
 } from "lucide-react"
+
+import { HashtagMultiSelect } from "@/components/session-fields/hashtag-multi-select"
+import { SessionReflectionField } from "@/components/session-fields/session-reflection-field"
+import { SubjectSelect } from "@/components/session-fields/subject-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -28,19 +29,6 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -59,8 +47,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { cn } from "@/lib/utils"
-import type { TagItem } from "@/components/log-session/tag-manager"
+import { SESSION_TIMER_LABEL, TOPIC_LABEL } from "@/lib/session-labels"
+import {
+  cloneTagItems,
+  getTagItemByValue,
+  PROTOTYPE_HASHTAGS,
+  PROTOTYPE_SUBJECTS,
+} from "@/lib/study-taxonomy"
+import type { TagItem } from "@/types/tag"
 import {
   type StudySession,
   type SessionTopic,
@@ -68,29 +62,6 @@ import {
   calculateEffectiveTime,
   validateSessionTimes,
 } from "@/types/session"
-
-// Default subjects and hashtags
-const defaultSubjects: TagItem[] = [
-  { id: "1", value: "theoretical-physics", label: "Theoretical Physics", color: "#3b82f6" },
-  { id: "2", value: "mathematics", label: "Mathematics", color: "#8b5cf6" },
-  { id: "3", value: "computer-science", label: "Computer Science", color: "#22c55e" },
-  { id: "4", value: "literature", label: "Literature", color: "#f97316" },
-  { id: "5", value: "chemistry", label: "Chemistry", color: "#ef4444" },
-  { id: "6", value: "biology", label: "Biology", color: "#14b8a6" },
-  { id: "7", value: "history", label: "History", color: "#eab308" },
-  { id: "8", value: "user-experience-design", label: "UI109007: User experience design", color: "#ec4899" },
-]
-
-const defaultHashtags: TagItem[] = [
-  { id: "1", value: "quantum", label: "#quantum", color: "#3b82f6" },
-  { id: "2", value: "mechanics", label: "#mechanics", color: "#8b5cf6" },
-  { id: "3", value: "algebra", label: "#algebra", color: "#22c55e" },
-  { id: "4", value: "calculus", label: "#calculus", color: "#f97316" },
-  { id: "5", value: "algorithms", label: "#algorithms", color: "#ef4444" },
-  { id: "6", value: "data-structures", label: "#data-structures", color: "#14b8a6" },
-  { id: "7", value: "research", label: "#research", color: "#eab308" },
-  { id: "8", value: "ux-design", label: "#ux-design", color: "#ec4899" },
-]
 
 interface SessionEditorSheetProps {
   session: StudySession | null
@@ -107,100 +78,73 @@ export function SessionEditorSheet({
   onSave,
   onDelete,
 }: SessionEditorSheetProps) {
-  // Form state
   const [selectedSubject, setSelectedSubject] = React.useState("")
-  const [subjectOpen, setSubjectOpen] = React.useState(false)
   const [selectedHashtags, setSelectedHashtags] = React.useState<string[]>([])
-  const [hashtagsOpen, setHashtagsOpen] = React.useState(false)
   const [reflection, setReflection] = React.useState("")
-  
-  // Time state
+
   const [startTime, setStartTime] = React.useState("09:00")
   const [endTime, setEndTime] = React.useState("10:00")
   const [pauseMinutes, setPauseMinutes] = React.useState(0)
   const [pauseSeconds, setPauseSeconds] = React.useState(0)
-  
-  // Topics state
+
   const [topics, setTopics] = React.useState<SessionTopic[]>([])
   const [selectedTopicId, setSelectedTopicId] = React.useState<string | null>(null)
   const [isEditingTopic, setIsEditingTopic] = React.useState(false)
   const [editTopicName, setEditTopicName] = React.useState("")
   const [editTopicDuration, setEditTopicDuration] = React.useState({ h: 0, m: 0, s: 0 })
-  const [editTopicReflection, setEditTopicReflection] = React.useState("")
   const [isAddingTopic, setIsAddingTopic] = React.useState(false)
-  
-  // Validation state
+
   const [timeError, setTimeError] = React.useState<string | null>(null)
-  
-  // Available tags
-  const [subjects] = React.useState<TagItem[]>(defaultSubjects)
-  const [hashtags] = React.useState<TagItem[]>(defaultHashtags)
+  const [subjects, setSubjects] = React.useState<TagItem[]>(() =>
+    cloneTagItems(PROTOTYPE_SUBJECTS),
+  )
+  const [hashtags, setHashtags] = React.useState<TagItem[]>(() =>
+    cloneTagItems(PROTOTYPE_HASHTAGS),
+  )
 
-  // Get selected topic
-  const selectedTopic = topics.find((t) => t.id === selectedTopicId)
+  const selectedTopic = topics.find((topic) => topic.id === selectedTopicId)
 
-  // Initialize form when session changes
   React.useEffect(() => {
-    if (session) {
-      setSelectedSubject(session.subject)
-      setSelectedHashtags(session.hashtags)
-      setReflection(session.reflection)
-      setStartTime(session.startTime)
-      setEndTime(session.endTime)
-      setPauseMinutes(Math.floor(session.pauseTime / 60))
-      setPauseSeconds(session.pauseTime % 60)
-      setTopics(session.topics)
-      setSelectedTopicId(session.topics[0]?.id || null)
-      setIsEditingTopic(false)
-      setIsAddingTopic(false)
-      setTimeError(null)
-    }
+    if (!session) return
+
+    setSelectedSubject(session.subject)
+    setSelectedHashtags(session.hashtags)
+    setReflection(session.reflection)
+    setStartTime(session.startTime)
+    setEndTime(session.endTime)
+    setPauseMinutes(Math.floor(session.pauseTime / 60))
+    setPauseSeconds(session.pauseTime % 60)
+    setTopics(session.topics)
+    setSelectedTopicId(session.topics[0]?.id || null)
+    setIsEditingTopic(false)
+    setIsAddingTopic(false)
+    setTimeError(null)
   }, [session])
 
-  // Update edit form when selected topic changes
   React.useEffect(() => {
-    if (selectedTopic && !isAddingTopic) {
-      setEditTopicName(selectedTopic.name)
-      setEditTopicDuration({
-        h: Math.floor(selectedTopic.duration / 3600),
-        m: Math.floor((selectedTopic.duration % 3600) / 60),
-        s: selectedTopic.duration % 60,
-      })
-      setEditTopicReflection(selectedTopic.reflection || "")
-    }
-  }, [selectedTopic, isAddingTopic])
+    if (!selectedTopic || isAddingTopic) return
 
-  // Calculate effective time
+    setEditTopicName(selectedTopic.name)
+    setEditTopicDuration({
+      h: Math.floor(selectedTopic.duration / 3600),
+      m: Math.floor((selectedTopic.duration % 3600) / 60),
+      s: selectedTopic.duration % 60,
+    })
+  }, [isAddingTopic, selectedTopic])
+
   const pauseTimeSeconds = pauseMinutes * 60 + pauseSeconds
   const effectiveTime = calculateEffectiveTime(startTime, endTime, pauseTimeSeconds)
-  
-  // Validate times
+
   React.useEffect(() => {
     const validation = validateSessionTimes(startTime, endTime, pauseTimeSeconds)
     setTimeError(validation.valid ? null : validation.error || null)
   }, [startTime, endTime, pauseTimeSeconds])
 
-  const wordCount = reflection.trim() ? reflection.trim().split(/\s+/).length : 0
-
-  const toggleHashtag = (value: string) => {
-    setSelectedHashtags((current) =>
-      current.includes(value)
-        ? current.filter((item) => item !== value)
-        : [...current, value]
-    )
-  }
-
-  const removeHashtag = (value: string) => {
-    setSelectedHashtags((current) => current.filter((item) => item !== value))
-  }
-
-  // Topic management
   const startAddTopic = () => {
     setIsAddingTopic(true)
     setIsEditingTopic(true)
     setEditTopicName("")
     setEditTopicDuration({ h: 0, m: 0, s: 0 })
-    setEditTopicReflection("")
     setSelectedTopicId(null)
   }
 
@@ -214,14 +158,13 @@ export function SessionEditorSheet({
         id: crypto.randomUUID(),
         name: editTopicName.trim(),
         duration: durationSeconds,
-        reflection: editTopicReflection,
       }
       setTopics([...topics, newTopic])
       setSelectedTopicId(newTopic.id)
     } else if (selectedTopicId) {
       setTopics(topics.map((t) =>
         t.id === selectedTopicId
-          ? { ...t, name: editTopicName.trim(), duration: durationSeconds, reflection: editTopicReflection }
+          ? { ...t, name: editTopicName.trim(), duration: durationSeconds }
           : t
       ))
     }
@@ -248,9 +191,9 @@ export function SessionEditorSheet({
 
   const handleSave = () => {
     if (!session || timeError) return
-    
-    const selectedSubjectData = subjects.find((s) => s.value === selectedSubject)
-    
+
+    const selectedSubjectData = getTagItemByValue(subjects, selectedSubject)
+
     const updatedSession: StudySession = {
       ...session,
       subject: selectedSubject,
@@ -270,9 +213,8 @@ export function SessionEditorSheet({
   }
 
   const handleDelete = () => {
-    if (session) {
-      onDelete(session.id)
-    }
+    if (!session) return
+    onDelete(session.id)
   }
 
   if (!session) return null
@@ -298,161 +240,28 @@ export function SessionEditorSheet({
                 Session Metadata
               </h3>
               <div className="grid gap-4 md:grid-cols-2">
-                {/* Subject Combobox */}
                 <div className="space-y-2">
                   <Label>Subject</Label>
-                  <Popover open={subjectOpen} onOpenChange={setSubjectOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={subjectOpen}
-                        className="w-full justify-between font-normal"
-                      >
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          {selectedSubject ? (
-                            <>
-                              <div
-                                className="size-3 shrink-0 rounded-full"
-                                style={{
-                                  backgroundColor: subjects.find((s) => s.value === selectedSubject)?.color,
-                                }}
-                              />
-                              <span className="truncate">
-                                {subjects.find((s) => s.value === selectedSubject)?.label}
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <Book className="size-4 shrink-0" />
-                              <span>Select subject...</span>
-                            </>
-                          )}
-                        </div>
-                        <ChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                      <Command>
-                        <CommandInput placeholder="Search subject..." />
-                        <CommandList>
-                          <CommandEmpty>No subject found.</CommandEmpty>
-                          <CommandGroup>
-                            {subjects.map((subject) => (
-                              <CommandItem
-                                key={subject.id}
-                                value={subject.value}
-                                onSelect={(value) => {
-                                  setSelectedSubject(value === selectedSubject ? "" : value)
-                                  setSubjectOpen(false)
-                                }}
-                              >
-                                <div
-                                  className="mr-2 size-3 shrink-0 rounded-full"
-                                  style={{ backgroundColor: subject.color }}
-                                />
-                                <Check
-                                  className={cn(
-                                    "mr-2 size-4",
-                                    selectedSubject === subject.value ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {subject.label}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <SubjectSelect
+                    subjects={subjects}
+                    hashtags={hashtags}
+                    value={selectedSubject}
+                    onChange={setSelectedSubject}
+                    onSubjectsChange={setSubjects}
+                    onHashtagsChange={setHashtags}
+                  />
                 </div>
 
-                {/* Hashtags Multi-Select */}
                 <div className="space-y-2">
                   <Label>Hashtags</Label>
-                  <Popover open={hashtagsOpen} onOpenChange={setHashtagsOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={hashtagsOpen}
-                        className="w-full justify-between font-normal"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Hash className="size-4 shrink-0" />
-                          {selectedHashtags.length > 0
-                            ? `${selectedHashtags.length} selected`
-                            : "Select hashtags..."}
-                        </div>
-                        <ChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                      <Command>
-                        <CommandInput placeholder="Search hashtags..." />
-                        <CommandList>
-                          <CommandEmpty>No hashtag found.</CommandEmpty>
-                          <CommandGroup>
-                            {hashtags.map((hashtag) => (
-                              <CommandItem
-                                key={hashtag.id}
-                                value={hashtag.value}
-                                onSelect={() => toggleHashtag(hashtag.value)}
-                              >
-                                <div
-                                  className="mr-2 size-3 shrink-0 rounded-full"
-                                  style={{ backgroundColor: hashtag.color }}
-                                />
-                                <Check
-                                  className={cn(
-                                    "mr-2 size-4",
-                                    selectedHashtags.includes(hashtag.value)
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                                {hashtag.label}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-
-                  {selectedHashtags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {selectedHashtags.map((tagValue) => {
-                        const tag = hashtags.find((h) => h.value === tagValue)
-                        return (
-                          <span
-                            key={tagValue}
-                            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
-                            style={{
-                              backgroundColor: tag?.color ? `${tag.color}20` : undefined,
-                              color: tag?.color,
-                              border: `1px solid ${tag?.color || "currentColor"}`,
-                            }}
-                          >
-                            {tag?.label || `#${tagValue}`}
-                            <span
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => removeHashtag(tagValue)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  removeHashtag(tagValue)
-                                }
-                              }}
-                              className="cursor-pointer rounded-full hover:opacity-70"
-                            >
-                              <X className="size-3" />
-                            </span>
-                          </span>
-                        )
-                      })}
-                    </div>
-                  )}
+                  <HashtagMultiSelect
+                    subjects={subjects}
+                    hashtags={hashtags}
+                    value={selectedHashtags}
+                    onChange={setSelectedHashtags}
+                    onSubjectsChange={setSubjects}
+                    onHashtagsChange={setHashtags}
+                  />
                 </div>
               </div>
             </section>
@@ -464,25 +273,103 @@ export function SessionEditorSheet({
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
                 Reflection
               </h3>
-              <div className="space-y-2">
-                <textarea
-                  value={reflection}
-                  onChange={(e) => setReflection(e.target.value)}
-                  placeholder="Your session reflection..."
-                  className="min-h-[250px] w-full resize-y rounded-md border border-input bg-background px-4 py-3 text-base leading-relaxed placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{wordCount} words</span>
+              <SessionReflectionField
+                value={reflection}
+                onChange={setReflection}
+                placeholder="Your session reflection..."
+              />
+            </section>
+
+            <Separator />
+
+            {/* Section: Session Timer */}
+            <section>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+                {SESSION_TIMER_LABEL}
+              </h3>
+
+              {timeError && (
+                <div className="mb-4 flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  <AlertTriangle className="size-4 shrink-0" />
+                  {timeError}
+                </div>
+              )}
+
+              <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-2">
+                  <Label htmlFor="start-time" className="flex items-center gap-2 text-xs">
+                    <Play className="size-3" />
+                    Start
+                  </Label>
+                  <Input
+                    id="start-time"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="end-time" className="flex items-center gap-2 text-xs">
+                    <Clock className="size-3" />
+                    End
+                  </Label>
+                  <Input
+                    id="end-time"
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-xs">
+                    <Pause className="size-3" />
+                    Paused
+                  </Label>
+                  <div className="flex gap-1">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={59}
+                      value={pauseMinutes}
+                      onChange={(e) => setPauseMinutes(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="text-center h-9 text-sm"
+                      placeholder="m"
+                    />
+                    <span className="self-center text-muted-foreground">:</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={59}
+                      value={pauseSeconds}
+                      onChange={(e) => setPauseSeconds(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
+                      className="text-center h-9 text-sm"
+                      placeholder="s"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-xs">
+                    <Clock className="size-3" />
+                    Effective
+                  </Label>
+                  <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm font-mono">
+                    {timeError ? "--:--:--" : formatSecondsToDuration(effectiveTime)}
+                  </div>
                 </div>
               </div>
             </section>
 
             <Separator />
 
-            {/* Section: Topics (Compact) */}
+            {/* Section: Topic */}
             <section>
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-                Topics
+                {TOPIC_LABEL}
               </h3>
               
               {/* Single row topic selector with actions */}
@@ -493,7 +380,7 @@ export function SessionEditorSheet({
                       <Input
                         value={editTopicName}
                         onChange={(e) => setEditTopicName(e.target.value)}
-                        placeholder="Topic name..."
+                        placeholder={`${TOPIC_LABEL} name...`}
                         className="flex-1"
                         autoFocus
                       />
@@ -503,7 +390,7 @@ export function SessionEditorSheet({
                         onValueChange={setSelectedTopicId}
                       >
                         <SelectTrigger className="flex-1">
-                          <SelectValue placeholder="Select a topic..." />
+                          <SelectValue placeholder={`Select a ${TOPIC_LABEL.toLowerCase()}...`} />
                         </SelectTrigger>
                         <SelectContent>
                           {topics.map((topic) => (
@@ -603,96 +490,12 @@ export function SessionEditorSheet({
                     className="w-full gap-2"
                   >
                     <Plus className="size-4" />
-                    Add Topic
+                    Add {TOPIC_LABEL}
                   </Button>
                 )}
               </div>
 
 
-            </section>
-
-            <Separator />
-
-            {/* Section: Time Information */}
-            <section>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-                Time Information
-              </h3>
-              
-              {timeError && (
-                <div className="mb-4 flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  <AlertTriangle className="size-4 shrink-0" />
-                  {timeError}
-                </div>
-              )}
-
-              <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start-time" className="flex items-center gap-2 text-xs">
-                    <Play className="size-3" />
-                    Start
-                  </Label>
-                  <Input
-                    id="start-time"
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="h-9"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="end-time" className="flex items-center gap-2 text-xs">
-                    <Clock className="size-3" />
-                    End
-                  </Label>
-                  <Input
-                    id="end-time"
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="h-9"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-xs">
-                    <Pause className="size-3" />
-                    Paused
-                  </Label>
-                  <div className="flex gap-1">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={59}
-                      value={pauseMinutes}
-                      onChange={(e) => setPauseMinutes(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="text-center h-9 text-sm"
-                      placeholder="m"
-                    />
-                    <span className="self-center text-muted-foreground">:</span>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={59}
-                      value={pauseSeconds}
-                      onChange={(e) => setPauseSeconds(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
-                      className="text-center h-9 text-sm"
-                      placeholder="s"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-xs">
-                    <Clock className="size-3" />
-                    Effective
-                  </Label>
-                  <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm font-mono">
-                    {timeError ? "--:--:--" : formatSecondsToDuration(effectiveTime)}
-                  </div>
-                </div>
-              </div>
             </section>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Plus, Pencil, Trash2, Check, X, Settings, Search } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -14,13 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-
-interface TagItem {
-  id: string
-  value: string
-  label: string
-  color: string
-}
+import type { TagItem } from "@/types/tag"
 
 const colorOptions = [
   { value: "", label: "No color" },
@@ -362,4 +357,4 @@ export function TagManager({
   )
 }
 
-export type { TagItem }
+export type { TagItem } from "@/types/tag"
