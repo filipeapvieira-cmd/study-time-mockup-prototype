@@ -18,6 +18,7 @@ import { HashtagMultiSelect } from "@/components/session-fields/hashtag-multi-se
 import { SessionReflectionField } from "@/components/session-fields/session-reflection-field"
 import { SubjectSelect } from "@/components/session-fields/subject-select"
 import { Button } from "@/components/ui/button"
+import { Field, FieldContent, FieldGroup, FieldTitle } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { InputGroup, InputGroupInput, InputGroupText } from "@/components/ui/input-group"
 import { Label } from "@/components/ui/label"
@@ -376,134 +377,167 @@ export function SessionEditorSheet({
 
             {/* Section: Topic */}
             <section>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-                {TOPIC_LABEL}
-              </h3>
-              
-              {/* Single row topic selector with actions */}
-              <div className="flex items-center gap-2">
-                {topics.length > 0 || isAddingTopic ? (
-                  <>
-                    {isEditingTopic ? (
-                      <Input
-                        value={editTopicName}
-                        onChange={(e) => setEditTopicName(e.target.value)}
-                        placeholder={`${TOPIC_LABEL} name...`}
-                        className="flex-1"
-                        autoFocus
-                      />
+              <FieldGroup className="gap-4">
+                <Field>
+                  <FieldTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    {TOPIC_LABEL}
+                  </FieldTitle>
+                  <FieldContent className="gap-3">
+                    {topics.length > 0 || isAddingTopic ? (
+                      <>
+                        <div className="w-full">
+                          {isEditingTopic ? (
+                            <Input
+                              value={editTopicName}
+                              onChange={(e) => setEditTopicName(e.target.value)}
+                              placeholder={`${TOPIC_LABEL} name...`}
+                              className="h-9 w-full"
+                              autoFocus
+                            />
+                          ) : (
+                            <Select
+                              value={selectedTopicId || undefined}
+                              onValueChange={setSelectedTopicId}
+                            >
+                              <SelectTrigger className="h-9 w-full">
+                                <SelectValue placeholder={`Select a ${TOPIC_LABEL.toLowerCase()}...`} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {topics.map((topic) => (
+                                  <SelectItem key={topic.id} value={topic.id}>
+                                    <div className="flex min-w-0 items-center gap-2">
+                                      <span className="truncate">{topic.name}</span>
+                                      <span className="font-mono text-xs text-muted-foreground">
+                                        ({formatSecondsToDuration(topic.duration)})
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          {isEditingTopic ? (
+                            <InputGroup aria-label={`${TOPIC_LABEL} duration`} className="w-full sm:max-w-sm">
+                              <InputGroupInput
+                                type="number"
+                                min={0}
+                                max={23}
+                                value={editTopicDuration.h}
+                                onChange={(e) =>
+                                  setEditTopicDuration({
+                                    ...editTopicDuration,
+                                    h: Math.max(0, parseInt(e.target.value) || 0),
+                                  })
+                                }
+                                className="min-w-0 basis-0 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                placeholder="hh"
+                                aria-label="Topic hours"
+                              />
+                              <InputGroupText className="shrink-0 px-1 font-medium tabular-nums">
+                                h
+                              </InputGroupText>
+                              <InputGroupInput
+                                type="number"
+                                min={0}
+                                max={59}
+                                value={editTopicDuration.m}
+                                onChange={(e) =>
+                                  setEditTopicDuration({
+                                    ...editTopicDuration,
+                                    m: Math.min(59, Math.max(0, parseInt(e.target.value) || 0)),
+                                  })
+                                }
+                                className="min-w-0 basis-0 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                placeholder="mm"
+                                aria-label="Topic minutes"
+                              />
+                              <InputGroupText className="shrink-0 px-1 font-medium tabular-nums">
+                                m
+                              </InputGroupText>
+                              <InputGroupInput
+                                type="number"
+                                min={0}
+                                max={59}
+                                value={editTopicDuration.s}
+                                onChange={(e) =>
+                                  setEditTopicDuration({
+                                    ...editTopicDuration,
+                                    s: Math.min(59, Math.max(0, parseInt(e.target.value) || 0)),
+                                  })
+                                }
+                                className="min-w-0 basis-0 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                placeholder="ss"
+                                aria-label="Topic seconds"
+                              />
+                              <InputGroupText className="shrink-0 px-1 font-medium tabular-nums">
+                                s
+                              </InputGroupText>
+                            </InputGroup>
+                          ) : (
+                            <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm font-mono sm:min-w-36">
+                              {selectedTopic ? formatSecondsToDuration(selectedTopic.duration) : "--:--:--"}
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-1 self-end sm:self-auto">
+                            {isEditingTopic ? (
+                              <>
+                                <Button size="sm" onClick={saveTopicEdit} disabled={!editTopicName.trim()}>
+                                  <Check className="size-4" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={cancelTopicEdit}>
+                                  <X className="size-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="size-9"
+                                  onClick={() => setIsEditingTopic(true)}
+                                  disabled={!selectedTopicId}
+                                >
+                                  <Pencil className="size-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="size-9 text-destructive hover:text-destructive"
+                                  onClick={deleteTopic}
+                                  disabled={!selectedTopicId}
+                                >
+                                  <Trash2 className="size-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="outline"
+                                  className="size-9"
+                                  onClick={startAddTopic}
+                                >
+                                  <Plus className="size-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </>
                     ) : (
-                      <Select
-                        value={selectedTopicId || undefined}
-                        onValueChange={setSelectedTopicId}
+                      <Button
+                        variant="outline"
+                        onClick={startAddTopic}
+                        className="w-full gap-2"
                       >
-                        <SelectTrigger className="flex-1">
-                          <SelectValue placeholder={`Select a ${TOPIC_LABEL.toLowerCase()}...`} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {topics.map((topic) => (
-                            <SelectItem key={topic.id} value={topic.id}>
-                              <div className="flex items-center gap-2">
-                                <span>{topic.name}</span>
-                                <span className="text-xs text-muted-foreground font-mono">
-                                  ({formatSecondsToDuration(topic.duration)})
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        <Plus className="size-4" />
+                        Add {TOPIC_LABEL}
+                      </Button>
                     )}
-                    
-                    {/* Duration input when editing */}
-                    {isEditingTopic && (
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={23}
-                          value={editTopicDuration.h}
-                          onChange={(e) => setEditTopicDuration({ ...editTopicDuration, h: Math.max(0, parseInt(e.target.value) || 0) })}
-                          className="w-12 text-center h-9 text-sm"
-                        />
-                        <span className="text-xs text-muted-foreground">h</span>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={59}
-                          value={editTopicDuration.m}
-                          onChange={(e) => setEditTopicDuration({ ...editTopicDuration, m: Math.min(59, Math.max(0, parseInt(e.target.value) || 0)) })}
-                          className="w-12 text-center h-9 text-sm"
-                        />
-                        <span className="text-xs text-muted-foreground">m</span>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={59}
-                          value={editTopicDuration.s}
-                          onChange={(e) => setEditTopicDuration({ ...editTopicDuration, s: Math.min(59, Math.max(0, parseInt(e.target.value) || 0)) })}
-                          className="w-12 text-center h-9 text-sm"
-                        />
-                        <span className="text-xs text-muted-foreground">s</span>
-                      </div>
-                    )}
-                    
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      {isEditingTopic ? (
-                        <>
-                          <Button size="sm" onClick={saveTopicEdit} disabled={!editTopicName.trim()}>
-                            <Check className="size-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={cancelTopicEdit}>
-                            <X className="size-4" />
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="size-9"
-                            onClick={() => setIsEditingTopic(true)}
-                            disabled={!selectedTopicId}
-                          >
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="size-9 text-destructive hover:text-destructive"
-                            onClick={deleteTopic}
-                            disabled={!selectedTopicId}
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="size-9"
-                            onClick={startAddTopic}
-                          >
-                            <Plus className="size-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={startAddTopic}
-                    className="w-full gap-2"
-                  >
-                    <Plus className="size-4" />
-                    Add {TOPIC_LABEL}
-                  </Button>
-                )}
-              </div>
-
-
+                  </FieldContent>
+                </Field>
+              </FieldGroup>
             </section>
           </div>
         </div>
