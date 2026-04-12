@@ -193,50 +193,65 @@ export function SessionPanel() {
             </div>
           </div>
 
-          {/* Play/Pause Button */}
-          <Button
-            onClick={handleSessionPrimaryAction}
-            variant={isSessionPlaying ? "outline" : "default"}
-            className="h-9 w-full gap-2 rounded-md border-input text-sm font-medium shadow-sm"
-          >
-            {isSessionPlaying ? (
-              <>
-                <Pause className="size-4" />
-                Pause
-              </>
-            ) : (
-              <>
-                <Play className="size-4" />
-                {sessionStatus === "paused" ? "Resume Session" : "Start Session"}
-              </>
-            )}
-          </Button>
-
-          {/* Control Buttons */}
+          {/* Session Control Buttons */}
           <div className="flex items-center justify-center gap-2">
             <Button
-              variant="outline"
+              onClick={handleSessionPrimaryAction}
+              variant="default"
+              size="icon-sm"
+              className="rounded-md shadow-sm"
+              title={
+                isSessionPlaying
+                  ? "Pause session"
+                  : sessionStatus === "paused"
+                    ? "Resume session"
+                    : "Start session"
+              }
+              aria-label={
+                isSessionPlaying
+                  ? "Pause session"
+                  : sessionStatus === "paused"
+                    ? "Resume session"
+                    : "Start session"
+              }
+              aria-pressed={isSessionPlaying}
+            >
+              {isSessionPlaying ? (
+                <Pause className="size-4" />
+              ) : (
+                <Play className="size-4" />
+              )}
+              <span className="sr-only">
+                {isSessionPlaying
+                  ? "Pause session"
+                  : sessionStatus === "paused"
+                    ? "Resume session"
+                    : "Start session"}
+              </span>
+            </Button>
+            <Button
+              variant="default"
               size="icon-sm"
               onClick={resetTimer}
-              className="rounded-md border-input bg-background text-foreground shadow-xs transition-colors hover:bg-accent hover:text-foreground"
+              className="rounded-md shadow-sm"
               title="Reset timer"
             >
               <RotateCcw className="size-4" />
             </Button>
             <Button
-              variant="outline"
+              variant="default"
               size="icon-sm"
               onClick={stopSession}
-              className="rounded-md border-input bg-background text-foreground shadow-xs transition-colors hover:bg-accent hover:text-foreground"
+              className="rounded-md shadow-sm"
               title="Stop session"
             >
               <Square className="size-4" />
             </Button>
             <Button
-              variant="outline"
+              variant="default"
               size="icon-sm"
               onClick={saveSession}
-              className="rounded-md border-input bg-background text-foreground shadow-xs transition-colors hover:bg-accent hover:text-foreground"
+              className="rounded-md shadow-sm"
               title="Save session"
             >
               <Save className="size-4" />
