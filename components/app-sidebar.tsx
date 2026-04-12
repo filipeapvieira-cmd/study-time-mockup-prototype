@@ -17,6 +17,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { useZenMode } from "@/contexts/zen-mode-context"
+import { mockUser, mockUserInitials } from "@/lib/mock-user"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -190,15 +191,15 @@ export function AppSidebar() {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="size-8 rounded-lg">
-                    <AvatarImage src="/avatar.jpg" alt="User" />
+                    <AvatarImage src={mockUser.avatarSrc} alt={mockUser.name} />
                     <AvatarFallback className="rounded-lg">
-                      JD
+                      {mockUserInitials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">John Doe</span>
+                    <span className="truncate font-semibold">{mockUser.name}</span>
                     <span className="truncate text-xs text-muted-foreground">
-                      john@example.com
+                      {mockUser.email}
                     </span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4" />
@@ -213,15 +214,15 @@ export function AppSidebar() {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     <Avatar className="size-8 rounded-lg">
-                      <AvatarImage src="/avatar.jpg" alt="User" />
+                      <AvatarImage src={mockUser.avatarSrc} alt={mockUser.name} />
                       <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
-                        JD
+                        {mockUserInitials}
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">John Doe</span>
+                      <span className="truncate font-semibold">{mockUser.name}</span>
                       <span className="truncate text-xs text-muted-foreground">
-                        john@example.com
+                        {mockUser.email}
                       </span>
                     </div>
                   </div>
