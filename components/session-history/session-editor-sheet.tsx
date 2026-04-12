@@ -68,6 +68,7 @@ import {
 
 interface SessionEditorSheetProps {
   session: StudySession | null
+  initialTopicId?: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onSave: (session: StudySession) => void
@@ -94,6 +95,7 @@ function partsToDuration(parts: DurationParts): number {
 
 export function SessionEditorSheet({
   session,
+  initialTopicId,
   open,
   onOpenChange,
   onSave,
@@ -187,7 +189,10 @@ export function SessionEditorSheet({
     }
 
     const initialTopics = session.topics
-    const initialTopic = initialTopics[0] ?? null
+    const requestedTopic = initialTopicId
+      ? initialTopics.find((topic) => topic.id === initialTopicId) ?? null
+      : null
+    const initialTopic = requestedTopic ?? initialTopics[0] ?? null
 
     loadTopicIntoForm(initialTopic)
     setStartTime(session.startTime)
@@ -200,7 +205,7 @@ export function SessionEditorSheet({
     setIsAddingTopic(false)
     setIsTopicLoading(false)
     setTimeError(null)
-  }, [loadTopicIntoForm, open, session])
+  }, [initialTopicId, loadTopicIntoForm, open, session])
 
   React.useEffect(() => {
     if (open) return

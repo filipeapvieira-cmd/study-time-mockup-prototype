@@ -354,6 +354,7 @@ export default function SessionHistoryPage() {
   // Editor state
   const [editorOpen, setEditorOpen] = React.useState(false)
   const [selectedSession, setSelectedSession] = React.useState<StudySession | null>(null)
+  const [initialTopicId, setInitialTopicId] = React.useState<string | null>(null)
 
   const totalRows = 488
   const totalPages = Math.ceil(totalRows / parseInt(rowsPerPage))
@@ -365,8 +366,9 @@ export default function SessionHistoryPage() {
     [groupedSessions]
   )
 
-  const handleRowClick = (session: StudySession) => {
+  const handleRowClick = (session: StudySession, topicId?: string) => {
     setSelectedSession(session)
+    setInitialTopicId(topicId ?? session.topics[0]?.id ?? null)
     setEditorOpen(true)
   }
 
@@ -376,12 +378,14 @@ export default function SessionHistoryPage() {
     )
     setEditorOpen(false)
     setSelectedSession(null)
+    setInitialTopicId(null)
   }
 
   const handleDeleteSession = (sessionId: string) => {
     setSessions((prev) => prev.filter((s) => s.id !== sessionId))
     setEditorOpen(false)
     setSelectedSession(null)
+    setInitialTopicId(null)
   }
 
   return (
@@ -508,7 +512,6 @@ export default function SessionHistoryPage() {
                           <span
                             key={topic.id}
                             className="text-sm font-medium leading-tight"
-                            style={{ color: topic.subjectColor }}
                           >
                             {topic.subjectLabel}
                           </span>
@@ -540,13 +543,10 @@ export default function SessionHistoryPage() {
                 {/* Sessions for this date */}
                 <div className="flex flex-col gap-3">
                   {groupedSessions[date].map((session) => {
-                    const leadTopic = session.topics[0]
-
                     return (
                       <div
                         key={session.id}
                         className="group cursor-pointer rounded-lg border bg-card p-4 transition-all hover:shadow-md"
-                        style={{ borderLeftWidth: "4px", borderLeftColor: leadTopic.subjectColor }}
                         onClick={() => handleRowClick(session)}
                       >
                         <div className="flex gap-4">
@@ -566,12 +566,17 @@ export default function SessionHistoryPage() {
                           {/* Right side - Topic list */}
                           <div className="flex min-w-0 flex-1 flex-col gap-3">
                             {session.topics.map((topic) => (
-                              <div key={topic.id} className="rounded-md border bg-muted/20 p-3">
+                              <div
+                                key={topic.id}
+                                className="cursor-pointer rounded-lg border bg-card p-4 transition-all"
+                                style={{ borderLeftWidth: "4px", borderLeftColor: topic.subjectColor }}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleRowClick(session, topic.id)
+                                }}
+                              >
                                 <div className="mb-2 flex items-center justify-between gap-3">
-                                  <span
-                                    className="font-medium"
-                                    style={{ color: topic.subjectColor }}
-                                  >
+                                  <span className="font-medium text-foreground">
                                     {topic.subjectLabel}
                                   </span>
                                   <span className="text-xs font-mono text-muted-foreground">
@@ -682,6 +687,7 @@ export default function SessionHistoryPage() {
       {/* Session Editor Sheet */}
       <SessionEditorSheet
         session={selectedSession}
+        initialTopicId={initialTopicId}
         open={editorOpen}
         onOpenChange={setEditorOpen}
         onSave={handleSaveSession}
