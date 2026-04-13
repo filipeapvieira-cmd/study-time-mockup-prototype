@@ -128,7 +128,7 @@ const sessionGlobalFilterFn: FilterFn<StudySession> = (
   return searchableText.includes(keyword)
 }
 
-export default function SessionHistoryPage() {
+function SessionHistoryPageContent() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -829,5 +829,21 @@ export default function SessionHistoryPage() {
         onDelete={handleDeleteSession}
       />
     </div>
+  )
+}
+
+function SessionHistoryPageFallback() {
+  return (
+    <div className="flex min-h-full items-center justify-center p-4 md:p-6">
+      <Loader2 className="text-muted-foreground size-6 animate-spin" />
+    </div>
+  )
+}
+
+export default function SessionHistoryPage() {
+  return (
+    <React.Suspense fallback={<SessionHistoryPageFallback />}>
+      <SessionHistoryPageContent />
+    </React.Suspense>
   )
 }
