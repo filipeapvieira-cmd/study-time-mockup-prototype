@@ -385,6 +385,7 @@ export default function AnalyticsPage() {
                       ))}
                     </Pie>
                     <ChartTooltip
+                      wrapperStyle={{ zIndex: 30 }}
                       content={
                         <ChartTooltipContent
                           hideLabel
