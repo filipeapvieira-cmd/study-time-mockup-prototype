@@ -10,9 +10,12 @@
     "a11y:prepare": "playwright install chromium",
     "a11y:lint": "node -e \"require('fs').mkdirSync('artifacts/a11y/raw',{recursive:true})\" && eslint . --format json --output-file artifacts/a11y/raw/eslint-a11y.json || node -e \"process.exit(0)\"",
     "a11y:axe": "playwright test --config=playwright.a11y.config.ts",
+    "a11y:axe:headed": "playwright test --config=playwright.a11y.config.ts --headed",
     "a11y:lighthouse": "node ./scripts/a11y/lighthouse.mjs",
     "a11y:report": "node ./scripts/a11y/report.mjs",
-    "a11y:audit": "pnpm run a11y:lint && pnpm run a11y:axe && pnpm run a11y:lighthouse && pnpm run a11y:report"
+    "a11y:audit": "pnpm run a11y:lint && pnpm run a11y:axe && pnpm run a11y:lighthouse && pnpm run a11y:report",
+    "a11y:audit:full": "pnpm run a11y:audit",
+    "a11y:audit:headed": "pnpm run a11y:lint && pnpm run a11y:axe:headed && pnpm run a11y:lighthouse && pnpm run a11y:report"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -61,6 +64,7 @@
     "platejs": "^52.3.21",
     "radix-ui": "^1.4.3",
     "react": "19.2.4",
+    "react-big-calendar": "^1.19.4",
     "react-day-picker": "9.13.2",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.54.1",

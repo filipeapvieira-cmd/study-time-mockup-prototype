@@ -14,6 +14,7 @@ import {
 import { Bar, BarChart, XAxis, YAxis, Pie, PieChart, Cell, Area, AreaChart } from "recharts"
 
 import { AIInsightPanel } from "@/components/analytics/ai-insight-panel"
+import { StudyActivityCalendar } from "@/components/analytics/study-activity-calendar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -263,8 +264,7 @@ export default function AnalyticsPage() {
       timeDistributionData,
       startHourData,
       period,
-      activeRange.from,
-      activeRange.to,
+      activeRange,
     ]
   )
 
@@ -424,6 +424,15 @@ export default function AnalyticsPage() {
     </Card>
   )
 
+  const studyActivityCalendarCard = (
+    <StudyActivityCalendar
+      period={period}
+      activeRange={activeRange}
+      filteredSessions={filteredSessions}
+      latestSessionDate={latestSessionDate}
+    />
+  )
+
   return (
     <div className="flex min-h-full flex-col gap-6 p-4 md:p-6">
       {/* Header */}
@@ -528,6 +537,7 @@ export default function AnalyticsPage() {
             {timeDistributionCard}
             {subjectMasteryCard}
             {startHourFocusCard}
+            {studyActivityCalendarCard}
           </div>
         </div>
       ) : (
@@ -537,6 +547,7 @@ export default function AnalyticsPage() {
             {subjectMasteryCard}
           </div>
           {startHourFocusCard}
+          {studyActivityCalendarCard}
         </>
       )}
     </div>
