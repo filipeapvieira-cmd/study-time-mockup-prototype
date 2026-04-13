@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { CalendarIcon, TrendingUp, X } from "lucide-react"
+import { CalendarIcon, MessageSquareText, TrendingUp, X } from "lucide-react"
 import {
   endOfMonth,
   endOfYear,
@@ -13,6 +13,7 @@ import {
 } from "date-fns"
 import { Bar, BarChart, XAxis, YAxis, Pie, PieChart, Cell, Area, AreaChart } from "recharts"
 
+import { AIInsightPanel } from "@/components/analytics/ai-insight-panel"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -24,6 +25,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
+import { buildAnalyticsInsights } from "@/lib/analytics-insights"
 import { TEMP_STUDY_SESSIONS } from "@/lib/session-dummy-data"
 
 type AnalyticsPeriod = "week" | "month" | "year"
@@ -75,6 +77,7 @@ function formatStartHourLabel(hour: number): string {
 
 export default function AnalyticsPage() {
   const [period, setPeriod] = React.useState<AnalyticsPeriod>("month")
+  const [showAiInsights, setShowAiInsights] = React.useState(false)
   const [dateRange, setDateRange] = React.useState<AnalyticsDateRange>({
     from: undefined,
     to: undefined,
@@ -238,6 +241,183 @@ export default function AnalyticsPage() {
       }))
   }, [filteredSessions])
 
+  const insightsResult = React.useMemo(
+    () =>
+      buildAnalyticsInsights({
+        subjectData,
+        totalTopicHours,
+        timeDistributionData,
+        startHourData,
+        period,
+        dateRange: activeRange,
+      }),
+    [
+      subjectData,
+      totalTopicHours,
+      timeDistributionData,
+      startHourData,
+      period,
+      activeRange.from,
+      activeRange.to,
+    ]
+  )
+
+  const timeDistributionCard = (
+    <Card className="min-w-0">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-semibold">Time Distribution</CardTitle>
+        <CardDescription>Total effective hours by weekday</CardDescription>
+      </CardHeader>
+      <CardContent className="px-3 sm:px-6">
+        <div className="h-[220px] w-full">
+          <ChartContainer config={barChartConfig} className="h-full w-full">
+            <BarChart data={timeDistributionData} accessibilityLayer>
+              <XAxis
+                dataKey="day"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                fontSize={12}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={(value) => `${value}h`}
+                fontSize={12}
+              />
+              <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
+              <Bar
+                dataKey="hours"
+                fill="hsl(var(--foreground))"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ChartContainer>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  const subjectMasteryCard = (
+    <Card className="min-w-0">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-semibold">Subject Mastery</CardTitle>
+        <CardDescription>Topic-time share in the selected range</CardDescription>
+      </CardHeader>
+      <CardContent className="px-3 sm:px-6">
+        <div className="flex justify-center">
+          <div className="relative h-[180px] w-[180px] shrink-0">
+            <ChartContainer config={pieChartConfig} className="!aspect-square">
+              <PieChart>
+                <Pie
+                  data={subjectData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={50}
+                  outerRadius={70}
+                  paddingAngle={4}
+                  cornerRadius={4}
+                  stroke="none"
+                >
+                  {subjectData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <ChartTooltip
+                  wrapperStyle={{ zIndex: 30 }}
+                  content={
+                    <ChartTooltipContent
+                      hideLabel
+                      formatter={(value, name) => (
+                        <div className="flex w-full items-center justify-between gap-3">
+                          <span className="text-muted-foreground">{String(name)}</span>
+                          <span className="font-mono font-medium tabular-nums">
+                            {typeof value === "number" ? `${value}%` : String(value)}
+                          </span>
+                        </div>
+                      )}
+                    />
+                  }
+                />
+              </PieChart>
+            </ChartContainer>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold">{formatHours(totalTopicHours)}h</span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Total
+              </span>
+            </div>
+          </div>
+        </div>
+        {subjectData.length === 0 ? (
+          <p className="mt-3 text-center text-sm text-muted-foreground">
+            No subject data in the selected range.
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
+  )
+
+  const startHourFocusCard = (
+    <Card className="min-w-0">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div>
+          <CardTitle className="text-base font-semibold">Start Hour Focus</CardTitle>
+          <CardDescription>Total effective hours by session start time</CardDescription>
+        </div>
+        <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+          <TrendingUp className="size-5 text-muted-foreground" />
+        </div>
+      </CardHeader>
+      <CardContent className="px-3 sm:px-6">
+        {startHourData.length > 0 ? (
+          <div className="h-[180px] w-full">
+            <ChartContainer config={startHourChartConfig} className="h-full w-full">
+              <AreaChart data={startHourData} accessibilityLayer>
+                <defs>
+                  <linearGradient id="startHourGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="0%"
+                      stopColor="hsl(var(--muted-foreground))"
+                      stopOpacity={0.3}
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="hsl(var(--muted-foreground))"
+                      stopOpacity={0.05}
+                    />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="time"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  fontSize={12}
+                  interval={0}
+                />
+                <YAxis hide />
+                <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
+                <Area
+                  type="monotone"
+                  dataKey="hours"
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeWidth={2}
+                  fill="url(#startHourGradient)"
+                />
+              </AreaChart>
+            </ChartContainer>
+          </div>
+        ) : (
+          <div className="flex h-[180px] items-center justify-center text-sm text-muted-foreground">
+            No sessions in the selected range.
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+
   return (
     <div className="flex min-h-full flex-col gap-6 p-4 md:p-6">
       {/* Header */}
@@ -270,6 +450,18 @@ export default function AnalyticsPage() {
             </ToggleGroupItem>
           </ToggleGroup>
           <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant={showAiInsights ? "default" : "outline"}
+              className="gap-2"
+              onClick={() => setShowAiInsights((previousValue) => !previousValue)}
+            >
+              <MessageSquareText className="size-4" />
+              <span className="hidden sm:inline">
+                {showAiInsights ? "Hide AI Insights" : "AI Insights"}
+              </span>
+              <span className="sm:hidden">AI</span>
+            </Button>
             {isDateFilterActive ? (
               <Button
                 type="button"
@@ -318,156 +510,29 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Middle Row - Time Distribution & Subject Mastery */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Time Distribution */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Time Distribution</CardTitle>
-            <CardDescription>Total effective hours by weekday</CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <div className="h-[220px] w-full">
-              <ChartContainer config={barChartConfig} className="h-full w-full">
-                <BarChart data={timeDistributionData} accessibilityLayer>
-                <XAxis
-                  dataKey="day"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  fontSize={12}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => `${value}h`}
-                  fontSize={12}
-                />
-                <ChartTooltip
-                  content={<ChartTooltipContent />}
-                  cursor={false}
-                />
-                <Bar
-                  dataKey="hours"
-                  fill="hsl(var(--foreground))"
-                  radius={[4, 4, 0, 0]}
-                />
-                </BarChart>
-              </ChartContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Subject Mastery */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Subject Mastery</CardTitle>
-            <CardDescription>Topic-time share in the selected range</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-center">
-              <div className="relative h-[180px] w-[180px] shrink-0">
-                <ChartContainer config={pieChartConfig} className="!aspect-square">
-                  <PieChart>
-                    <Pie
-                      data={subjectData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={50}
-                      outerRadius={70}
-                      paddingAngle={4}
-                      cornerRadius={4}
-                      stroke="none"
-                    >
-                      {subjectData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip
-                      wrapperStyle={{ zIndex: 30 }}
-                      content={
-                        <ChartTooltipContent
-                          hideLabel
-                          formatter={(value, name) => (
-                            <div className="flex w-full items-center justify-between gap-3">
-                              <span className="text-muted-foreground">{String(name)}</span>
-                              <span className="font-mono font-medium tabular-nums">
-                                {typeof value === "number" ? `${value}%` : String(value)}
-                              </span>
-                            </div>
-                          )}
-                        />
-                      }
-                    />
-                  </PieChart>
-                </ChartContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold">{formatHours(totalTopicHours)}h</span>
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Total
-                  </span>
-                </div>
-              </div>
-            </div>
-            {subjectData.length === 0 ? (
-              <p className="mt-3 text-center text-sm text-muted-foreground">
-                No subject data in the selected range.
-              </p>
-            ) : null}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Bottom Row - Start Hour Focus */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <div>
-            <CardTitle className="text-base font-semibold">Start Hour Focus</CardTitle>
-            <CardDescription>Total effective hours by session start time</CardDescription>
+      {showAiInsights ? (
+        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+          <div className="order-1 min-w-0 xl:order-2 xl:col-start-2">
+            <AIInsightPanel
+              insightsResult={insightsResult}
+              className="xl:sticky xl:top-6"
+            />
           </div>
-          <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
-            <TrendingUp className="size-5 text-muted-foreground" />
+          <div className="order-2 min-w-0 flex flex-col gap-4 xl:order-1 xl:col-start-1">
+            {timeDistributionCard}
+            {subjectMasteryCard}
+            {startHourFocusCard}
           </div>
-        </CardHeader>
-        <CardContent className="pl-2">
-          {startHourData.length > 0 ? (
-            <div className="h-[180px] w-full">
-              <ChartContainer config={startHourChartConfig} className="h-full w-full">
-                <AreaChart data={startHourData} accessibilityLayer>
-                  <defs>
-                    <linearGradient id="startHourGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.05} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis
-                    dataKey="time"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    fontSize={12}
-                    interval={0}
-                  />
-                  <YAxis hide />
-                  <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
-                  <Area
-                    type="monotone"
-                    dataKey="hours"
-                    stroke="hsl(var(--muted-foreground))"
-                    strokeWidth={2}
-                    fill="url(#startHourGradient)"
-                  />
-                </AreaChart>
-              </ChartContainer>
-            </div>
-          ) : (
-            <div className="flex h-[180px] items-center justify-center text-sm text-muted-foreground">
-              No sessions in the selected range.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {timeDistributionCard}
+            {subjectMasteryCard}
+          </div>
+          {startHourFocusCard}
+        </>
+      )}
     </div>
   )
 }
