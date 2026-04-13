@@ -93,18 +93,6 @@ function formatPercent(value: number): string {
   return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`
 }
 
-function formatSignedPercent(value: number): string {
-  const rounded = roundToSingleDecimal(value)
-  const magnitude = Number.isInteger(rounded)
-    ? `${Math.abs(rounded)}%`
-    : `${Math.abs(rounded).toFixed(1)}%`
-  if (rounded === 0) {
-    return "0%"
-  }
-
-  return rounded > 0 ? `+${magnitude}` : `-${magnitude}`
-}
-
 function formatRangeLabel(period: AnalyticsPeriod, dateRange: AnalyticsDateRange): string {
   if (dateRange.from && dateRange.to) {
     const fromLabel = format(dateRange.from, "MMM dd, yyyy")
@@ -185,24 +173,24 @@ function buildSubjectAllocationInsight(
     severity = "warning"
   }
 
-  let summary = `No subject allocation data was found in this range (0h tracked).`
-  let evidence = `Total topic time is ${formatHours(totalTopicHours)} and active subjects are 0.`
+  let summary = "No topic distribution insight yet for this range."
+  let evidence = `You tracked ${formatHours(totalTopicHours)} across 0 active subjects.`
 
   if (expectedShare !== null) {
     if (overAllocated.length === 0 && underAllocated.length === 0) {
-      summary = `Topic allocation is balanced across ${activeSubjects.length} subjects. Largest deviation from baseline is ${formatPercent(maxAbsoluteDelta)}.`
-      evidence = `Expected share is ${formatPercent(expectedShare)} per subject and total topic time is ${formatHours(totalTopicHours)}.`
+      summary = `Your subject time is balanced across ${activeSubjects.length} subjects.`
+      evidence = `Target per subject is ${formatPercent(expectedShare)}. Largest gap from target is ${formatPercent(maxAbsoluteDelta)}.`
     } else {
       const topOver = overAllocated[0]
       const topUnder = underAllocated[0]
       const overloadedText = topOver
-        ? `${topOver.name} is over baseline by ${formatSignedPercent(topOver.delta)}`
-        : "No subject is over baseline"
+        ? `${topOver.name} is above target by ${formatPercent(Math.abs(topOver.delta))}`
+        : "No subject is above target"
       const underloadedText = topUnder
-        ? `${topUnder.name} is under baseline by ${formatSignedPercent(topUnder.delta)}`
-        : "No subject is under baseline"
+        ? `${topUnder.name} is below target by ${formatPercent(Math.abs(topUnder.delta))}`
+        : "No subject is below target"
 
-      summary = `Subject allocation is uneven: ${overAllocated.length} over-allocated and ${underAllocated.length} under-allocated subjects against a ${formatPercent(expectedShare)} baseline.`
+      summary = `Your subject time is uneven: ${overAllocated.length} subjects are above target and ${underAllocated.length} are below target.`
       evidence = `${overloadedText}. ${underloadedText}. Total topic time is ${formatHours(totalTopicHours)}.`
     }
   }
@@ -212,9 +200,9 @@ function buildSubjectAllocationInsight(
     const primary = overAllocated[0]
     suggestions.push({
       id: "topic-over-allocation",
-      title: "Reduce dominant-subject concentration",
-      recommendation: `Cap ${primary.name} near ${formatPercent(primary.expectedShare)} in the next range and reallocate the excess to weaker subjects.`,
-      evidence: `${primary.name} currently sits at ${formatPercent(primary.share)}, which is ${formatSignedPercent(primary.delta)} vs baseline.`,
+      title: "Reduce time on your dominant subject",
+      recommendation: `In your next sessions, keep ${primary.name} close to ${formatPercent(primary.expectedShare)} and move extra time to weaker subjects.`,
+      evidence: `${primary.name} is at ${formatPercent(primary.share)}, which is ${formatPercent(Math.abs(primary.delta))} above target.`,
     })
   }
 
@@ -222,9 +210,9 @@ function buildSubjectAllocationInsight(
     const primary = underAllocated[0]
     suggestions.push({
       id: "topic-under-allocation",
-      title: "Increase weak-subject exposure",
-      recommendation: `Schedule additional focused blocks for ${primary.name} until it reaches at least ${formatPercent(primary.expectedShare)} share.`,
-      evidence: `${primary.name} is currently ${formatPercent(primary.share)} (${formatSignedPercent(primary.delta)} vs baseline).`,
+      title: "Increase time on your weakest subject",
+      recommendation: `Add focused blocks for ${primary.name} until it reaches at least ${formatPercent(primary.expectedShare)} of your study time.`,
+      evidence: `${primary.name} is at ${formatPercent(primary.share)}, which is ${formatPercent(Math.abs(primary.delta))} below target.`,
     })
   }
 
@@ -232,8 +220,8 @@ function buildSubjectAllocationInsight(
     suggestions.push({
       id: "topic-maintain-balance",
       title: "Maintain current allocation",
-      recommendation: "Keep the same subject mix and review only if one subject rises by more than 10 percentage points.",
-      evidence: `Largest allocation drift is ${formatPercent(maxAbsoluteDelta)} from the ${formatPercent(expectedShare)} baseline.`,
+      recommendation: "Keep the same subject mix and only adjust if one subject moves more than 10 percentage points from target.",
+      evidence: `Largest gap from target is ${formatPercent(maxAbsoluteDelta)} (target: ${formatPercent(expectedShare)}).`,
     })
   }
 
@@ -292,19 +280,24 @@ function buildWorkloadConsistencyInsight(
     consistencyLabel = "moderate"
   }
 
-  let summary = "Workload consistency could not be assessed because weekday totals are 0h."
-  let evidence = "Coefficient of variation is 0.0 with mean 0h/day."
+  let summary = "No weekly consistency insight yet for this range."
+  let evidence = "No weekday study hours were logged."
   const suggestions: AnalyticsSuggestion[] = []
 
   if (mean > 0 && busiestDay && lightestDay) {
-    summary = `Workload consistency is ${consistencyLabel}: CV is ${roundToSingleDecimal(
-      coefficientOfVariation
-    ).toFixed(2)} across ${formatHours(totalHours)} total weekly hours.`
+    if (consistencyLabel === "uneven") {
+      summary = "Your weekly workload is very uneven."
+    } else if (consistencyLabel === "moderate") {
+      summary = "Your weekly workload is somewhat uneven."
+    } else {
+      summary = "Your weekly workload is consistent."
+    }
+
     evidence = `${busiestDay.day} is highest at ${formatHours(
       busiestDay.hours
-    )}, ${lightestDay.day} is lowest at ${formatHours(lightestDay.hours)}, spread is ${formatHours(
+    )}, ${lightestDay.day} is lowest at ${formatHours(lightestDay.hours)}. Gap is ${formatHours(
       spreadHours
-    )}.`
+    )} across ${formatHours(totalHours)} total hours.`
 
     if (consistencyLabel === "uneven") {
       suggestions.push({
@@ -312,9 +305,7 @@ function buildWorkloadConsistencyInsight(
         title: "Flatten weekly spikes",
         recommendation:
           "Move at least one block from your busiest day to your two lightest days to reduce sharp workload swings.",
-        evidence: `Current spread is ${formatHours(spreadHours)} with CV ${roundToSingleDecimal(
-          coefficientOfVariation
-        ).toFixed(2)} (> ${WORKLOAD_MODERATE_THRESHOLD}).`,
+        evidence: `Current day-to-day gap is ${formatHours(spreadHours)}.`,
       })
     } else if (consistencyLabel === "moderate") {
       suggestions.push({
@@ -322,9 +313,7 @@ function buildWorkloadConsistencyInsight(
         title: "Tighten day-to-day variance",
         recommendation:
           "Shift a small portion of time from peak days to low days until daily totals differ by less than 2 hours.",
-        evidence: `Current spread is ${formatHours(spreadHours)} and CV is ${roundToSingleDecimal(
-          coefficientOfVariation
-        ).toFixed(2)}.`,
+        evidence: `Current day-to-day gap is ${formatHours(spreadHours)}.`,
       })
     } else {
       suggestions.push({
@@ -332,9 +321,7 @@ function buildWorkloadConsistencyInsight(
         title: "Preserve consistent cadence",
         recommendation:
           "Keep your current daily rhythm and only adjust when the weekly spread increases above 2 hours.",
-        evidence: `CV is ${roundToSingleDecimal(coefficientOfVariation).toFixed(
-          2
-        )} and spread is ${formatHours(spreadHours)}.`,
+        evidence: `Current day-to-day gap is ${formatHours(spreadHours)}.`,
       })
     }
   }

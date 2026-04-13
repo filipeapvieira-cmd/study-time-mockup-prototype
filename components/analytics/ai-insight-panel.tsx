@@ -1,5 +1,6 @@
 "use client"
 
+import type { CSSProperties } from "react"
 import {
   BarChart3,
   Clock3,
@@ -32,16 +33,32 @@ type AIInsightPanelProps = {
   className?: string
 }
 
-function getSeverityBadgeVariant(severity: InsightSeverity): "secondary" | "outline" | "destructive" {
+function getSeverityBadgeVariant(severity: InsightSeverity): "secondary" | "destructive" {
   if (severity === "critical") {
     return "destructive"
   }
 
-  if (severity === "warning") {
-    return "outline"
+  return "secondary"
+}
+
+function getSeverityBadgeStyle(severity: InsightSeverity): CSSProperties | undefined {
+  if (severity === "info") {
+    return {
+      backgroundColor: "var(--chart-2)",
+      borderColor: "transparent",
+      color: "var(--background)",
+    }
   }
 
-  return "secondary"
+  if (severity === "warning") {
+    return {
+      backgroundColor: "var(--chart-1)",
+      borderColor: "transparent",
+      color: "var(--background)",
+    }
+  }
+
+  return undefined
 }
 
 function getCategoryIcon(category: InsightCategory) {
@@ -60,29 +77,28 @@ function formatPercent(value: number): string {
   return Number.isInteger(value) ? `${value}%` : `${value.toFixed(1)}%`
 }
 
-function formatSignedPercent(value: number): string {
-  if (value === 0) {
-    return "0%"
-  }
-
-  const absoluteValue = Math.abs(value)
-  const magnitude = Number.isInteger(absoluteValue)
-    ? `${absoluteValue}%`
-    : `${absoluteValue.toFixed(1)}%`
-
-  return value > 0 ? `+${magnitude}` : `-${magnitude}`
-}
-
 function formatAllocationState(item: SubjectAllocationInsightItem): string {
   if (item.state === "balanced") {
-    return "Balanced"
+    return "On target"
   }
 
   if (item.state === "over") {
-    return "Over-allocated"
+    return "Above target"
   }
 
-  return "Under-allocated"
+  return "Below target"
+}
+
+function formatTargetDifference(item: SubjectAllocationInsightItem): string {
+  if (item.state === "balanced") {
+    return "In target range"
+  }
+
+  const distance = Math.abs(item.delta)
+  const distanceText = Number.isInteger(distance) ? `${distance}%` : `${distance.toFixed(1)}%`
+  return item.state === "over"
+    ? `Above target by ${distanceText}`
+    : `Below target by ${distanceText}`
 }
 
 export function AIInsightPanel({ insightsResult, className }: AIInsightPanelProps) {
@@ -127,7 +143,10 @@ export function AIInsightPanel({ insightsResult, className }: AIInsightPanelProp
                           <span className="text-sm font-medium">{insight.title}</span>
                           <span className="text-xs text-muted-foreground">{insight.summary}</span>
                         </div>
-                        <Badge variant={getSeverityBadgeVariant(insight.severity)}>
+                        <Badge
+                          variant={getSeverityBadgeVariant(insight.severity)}
+                          style={getSeverityBadgeStyle(insight.severity)}
+                        >
                           {insight.severity}
                         </Badge>
                       </div>
@@ -141,7 +160,7 @@ export function AIInsightPanel({ insightsResult, className }: AIInsightPanelProp
                         <div className="flex flex-col gap-3 rounded-md border p-3">
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
                             <span>Subject share</span>
-                            <span>Baseline {formatPercent(insightsResult.expectedShare)}</span>
+                            <span>Target {formatPercent(insightsResult.expectedShare)}</span>
                           </div>
                           {insightsResult.subjectAllocations.slice(0, 5).map((allocation) => (
                             <div key={allocation.name} className="flex flex-col gap-1.5">
@@ -155,9 +174,7 @@ export function AIInsightPanel({ insightsResult, className }: AIInsightPanelProp
                               />
                               <div className="flex items-center justify-between text-xs text-muted-foreground">
                                 <span>{formatAllocationState(allocation)}</span>
-                                <span>
-                                  Delta {formatSignedPercent(allocation.delta)} vs baseline
-                                </span>
+                                <span>{formatTargetDifference(allocation)}</span>
                               </div>
                             </div>
                           ))}
