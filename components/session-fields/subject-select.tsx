@@ -53,6 +53,7 @@ export function SubjectSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-label="Select subject"
           className={cn(
             "h-10 w-full justify-between rounded-md font-normal",
             className,

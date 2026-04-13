@@ -430,6 +430,16 @@ function SessionHistoryPageContent() {
     setEditorRoute(session.id, nextTopicId)
   }
 
+  const handleKeyboardActivation = (
+    event: React.KeyboardEvent<HTMLElement>,
+    action: () => void
+  ) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      action()
+    }
+  }
+
   const handleSaveSession = (updatedSession: StudySession) => {
     setSessions((prev) => prev.map((s) => (s.id === updatedSession.id ? updatedSession : s)))
     clearEditorRoute()
@@ -713,6 +723,11 @@ function SessionHistoryPageContent() {
                           key={session.id}
                           className="group cursor-pointer rounded-lg border bg-card p-4 transition-all hover:shadow-md"
                           onClick={() => handleRowClick(session)}
+                          onKeyDown={(event) =>
+                            handleKeyboardActivation(event, () => handleRowClick(session))
+                          }
+                          role="button"
+                          tabIndex={0}
                         >
                           <div className="flex gap-4">
                             <div className="flex shrink-0 flex-col items-center gap-1 text-center text-muted-foreground">
@@ -740,6 +755,14 @@ function SessionHistoryPageContent() {
                                     event.stopPropagation()
                                     handleRowClick(session, topic.id)
                                   }}
+                                  onKeyDown={(event) => {
+                                    event.stopPropagation()
+                                    handleKeyboardActivation(event, () =>
+                                      handleRowClick(session, topic.id)
+                                    )
+                                  }}
+                                  role="button"
+                                  tabIndex={0}
                                 >
                                   <div className="mb-2 flex items-center justify-between gap-3">
                                     <span className="font-medium text-foreground">

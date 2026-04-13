@@ -51,6 +51,7 @@ function ColorPicker({ value, onChange }: ColorPickerProps) {
           }`}
           style={{ backgroundColor: color.value || "transparent" }}
           title={color.label}
+          aria-label={`Set color to ${color.label}`}
         />
       ))}
     </div>
@@ -189,6 +190,7 @@ function TagList({ items, onAdd, onUpdate, onDelete, itemType }: TagListProps) {
                     variant="ghost"
                     className="size-8"
                     onClick={() => startEdit(item)}
+                    aria-label={`Edit ${itemType} ${item.label}`}
                   >
                     <Pencil className="size-4" />
                   </Button>
@@ -197,6 +199,7 @@ function TagList({ items, onAdd, onUpdate, onDelete, itemType }: TagListProps) {
                     variant="ghost"
                     className="size-8 text-destructive hover:text-destructive"
                     onClick={() => onDelete(item.id)}
+                    aria-label={`Delete ${itemType} ${item.label}`}
                   >
                     <Trash2 className="size-4" />
                   </Button>

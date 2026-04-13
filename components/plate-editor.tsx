@@ -15,7 +15,11 @@ export function PlateEditor() {
   return (
     <Plate editor={editor}>
       <EditorContainer>
-        <Editor variant="demo" placeholder="Type..." />
+        <Editor
+          variant="demo"
+          aria-label="Rich text editor"
+          placeholder="Type..."
+        />
       </EditorContainer>
     </Plate>
   );

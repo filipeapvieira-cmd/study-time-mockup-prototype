@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "a11y:prepare": "playwright install chromium",
+    "a11y:lint": "node -e \"require('fs').mkdirSync('artifacts/a11y/raw',{recursive:true})\" && eslint . --format json --output-file artifacts/a11y/raw/eslint-a11y.json || node -e \"process.exit(0)\"",
+    "a11y:axe": "playwright test --config=playwright.a11y.config.ts",
+    "a11y:lighthouse": "node ./scripts/a11y/lighthouse.mjs",
+    "a11y:report": "node ./scripts/a11y/report.mjs",
+    "a11y:audit": "pnpm run a11y:lint && pnpm run a11y:axe && pnpm run a11y:lighthouse && pnpm run a11y:report"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -67,10 +73,16 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/node": "^22",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.3",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "lighthouse": "^13.1.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.2.0",
     "tw-animate-css": "1.3.3",

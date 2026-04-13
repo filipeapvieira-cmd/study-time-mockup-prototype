@@ -82,6 +82,7 @@ export function HashtagMultiSelect({
       variant="outline"
       role="combobox"
       aria-expanded={open}
+      aria-label="Select hashtags"
       className={cn(
         "h-10 w-full justify-between rounded-md font-normal",
         className,

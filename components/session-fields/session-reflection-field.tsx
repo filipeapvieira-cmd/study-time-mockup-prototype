@@ -57,25 +57,46 @@ export function SessionReflectionField({
           >
             <Toolbar className="mb-2 flex-wrap gap-1 border-b border-border/50 pb-2">
               <ToolbarGroup>
-                <MarkToolbarButton nodeType="bold" tooltip="Bold (Ctrl+B)">
+                <MarkToolbarButton
+                  nodeType="bold"
+                  tooltip="Bold (Ctrl+B)"
+                  aria-label="Toggle bold formatting"
+                >
                   <Bold className="size-4" />
                 </MarkToolbarButton>
-                <MarkToolbarButton nodeType="italic" tooltip="Italic (Ctrl+I)">
+                <MarkToolbarButton
+                  nodeType="italic"
+                  tooltip="Italic (Ctrl+I)"
+                  aria-label="Toggle italic formatting"
+                >
                   <Italic className="size-4" />
                 </MarkToolbarButton>
-                <MarkToolbarButton nodeType="underline" tooltip="Underline (Ctrl+U)">
+                <MarkToolbarButton
+                  nodeType="underline"
+                  tooltip="Underline (Ctrl+U)"
+                  aria-label="Toggle underline formatting"
+                >
                   <Underline className="size-4" />
                 </MarkToolbarButton>
                 <MarkToolbarButton
                   nodeType="strikethrough"
                   tooltip="Strikethrough (Ctrl+Shift+X)"
+                  aria-label="Toggle strikethrough formatting"
                 >
                   <Strikethrough className="size-4" />
                 </MarkToolbarButton>
-                <MarkToolbarButton nodeType="code" tooltip="Code (Ctrl+E)">
+                <MarkToolbarButton
+                  nodeType="code"
+                  tooltip="Code (Ctrl+E)"
+                  aria-label="Toggle inline code formatting"
+                >
                   <Code className="size-4" />
                 </MarkToolbarButton>
-                <MarkToolbarButton nodeType="highlight" tooltip="Highlight (Ctrl+Shift+H)">
+                <MarkToolbarButton
+                  nodeType="highlight"
+                  tooltip="Highlight (Ctrl+Shift+H)"
+                  aria-label="Toggle highlight formatting"
+                >
                   <Highlighter className="size-4" />
                 </MarkToolbarButton>
               </ToolbarGroup>
@@ -85,6 +106,7 @@ export function SessionReflectionField({
             </Toolbar>
             <Editor
               variant="none"
+              aria-label="Session reflection editor"
               placeholder={placeholder}
               className="min-h-[190px] px-0 py-1 text-base leading-relaxed placeholder:text-muted-foreground/50 [&_p]:py-0 **:data-slate-placeholder:!top-0 **:data-slate-placeholder:!translate-y-0"
             />
