@@ -1,57 +1,11 @@
 import Link from "next/link"
 import {
   ArrowRight,
-  BarChart3,
   GraduationCap,
-  History,
-  Timer,
 } from "lucide-react"
 
-import { StackedImageCard } from "@/components/marketing/stacked-image-card"
+import { PixelImage } from "@/components/ui/pixel-image"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-
-const heroBadges = [
-  {
-    label: "2h 40m focused",
-    className:
-      "left-0 top-8 -translate-x-6 bg-[#55c2d3] text-[#113340] shadow-md lg:-translate-x-10",
-  },
-  {
-    label: "Daily goal completed",
-    className:
-      "right-0 top-16 translate-x-8 bg-[#f3cc78] text-[#4f3b12] shadow-md lg:translate-x-12",
-  },
-  {
-    label: "New streak: 14 days",
-    className:
-      "left-0 bottom-24 -translate-x-4 bg-[#8366f2] text-white shadow-md lg:-translate-x-8",
-  },
-  {
-    label: "3 sessions synced",
-    className:
-      "right-6 bottom-8 translate-y-4 bg-white text-foreground shadow-md",
-  },
-]
-
-const valueCards = [
-  {
-    icon: Timer,
-    title: "Log Sessions Fast",
-    copy: "Capture subject, duration, and reflection in under a minute.",
-  },
-  {
-    icon: History,
-    title: "See Your Patterns",
-    copy: "Revisit session history to learn what focus routine works best.",
-  },
-  {
-    icon: BarChart3,
-    title: "Track Momentum",
-    copy: "Visual analytics make it easy to keep a consistent study streak.",
-  },
-]
 
 export default function HomePage() {
   return (
@@ -71,9 +25,6 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" className="hidden sm:inline-flex">
-              <Link href="/session-history">View sessions</Link>
-            </Button>
             <Button asChild>
               <Link href="/dashboard">
                 Enter app
@@ -98,51 +49,18 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="flex w-full max-w-xl flex-col gap-3 sm:flex-row">
-              <Input
-                type="email"
-                placeholder="name@school.edu"
-                className="h-12 rounded-xl border-border/70 bg-white/80 shadow-sm"
-              />
-              <Button asChild className="h-12 rounded-xl px-7 text-sm sm:w-auto">
-                <Link href="/log-session">Start Your Focus Plan</Link>
-              </Button>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              {valueCards.map((card) => (
-                <Card
-                  key={card.title}
-                  className="border-border/60 bg-white/80 py-4 shadow-sm backdrop-blur-sm"
-                >
-                  <CardContent className="space-y-2 px-4">
-                    <card.icon className="size-4 text-primary" />
-                    <p className="text-sm font-semibold">{card.title}</p>
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      {card.copy}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           </div>
 
           <div className="relative overflow-visible">
             <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_35%_35%,rgba(131,102,242,0.2),transparent_60%)] blur-2xl" />
             <div className="relative mx-auto w-full max-w-[30rem] lg:translate-x-8 xl:translate-x-14">
-              <StackedImageCard
-                src="/images/landing_page.avif"
-                alt="Student using StudyTime to stay focused"
-                priority
-              />
-              {heroBadges.map((badge) => (
-                <div
-                  key={badge.label}
-                  className={`absolute rounded-full px-4 py-2 text-xs font-semibold tracking-wide ${badge.className}`}
-                >
-                  {badge.label}
-                </div>
-              ))}
+              <div className="origin-top-right translate-x-2 translate-y-1 rotate-[4deg]">
+                <PixelImage
+                  src="/images/landing_page.avif"
+                  customGrid={{ rows: 4, cols: 6 }}
+                  grayscaleAnimation
+                />
+              </div>
             </div>
           </div>
         </section>
