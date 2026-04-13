@@ -225,11 +225,14 @@ export function ToolbarSplitButtonSecondary({
   className,
   size,
   variant,
+  onClick,
+  type = 'button',
   ...props
-}: React.ComponentPropsWithoutRef<'span'> &
+}: React.ComponentPropsWithoutRef<'button'> &
   VariantProps<typeof dropdownArrowVariants>) {
   return (
-    <span
+    <button
+      type={type}
       className={cn(
         dropdownArrowVariants({
           size,
@@ -238,12 +241,14 @@ export function ToolbarSplitButtonSecondary({
         'group-data-[pressed=true]:bg-accent group-data-[pressed=true]:text-accent-foreground',
         className
       )}
-      onClick={(e) => e.stopPropagation()}
-      role="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick?.(e)
+      }}
       {...props}
     >
       <ChevronDown className="size-3.5 text-muted-foreground" data-icon />
-    </span>
+    </button>
   );
 }
 

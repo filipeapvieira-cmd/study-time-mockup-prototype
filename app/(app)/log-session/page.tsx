@@ -70,6 +70,7 @@ export default function LogSessionPage() {
                 size="sm"
                 className="gap-2 rounded-md shadow-sm"
                 onClick={() => setAiSheetOpen(true)}
+                aria-label="Open AI prompts"
               >
                 <MessageSquareText className="size-4" />
                 <span className="hidden sm:inline">AI Prompts</span>

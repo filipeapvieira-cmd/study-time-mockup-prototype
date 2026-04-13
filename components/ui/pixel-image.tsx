@@ -116,7 +116,8 @@ export const PixelImage = ({
         >
           <img
             src={src}
-            alt={`Pixel piece ${index + 1}`}
+            alt=""
+            aria-hidden="true"
             className={cn(
               "z-1 h-full w-full rounded-[2.5rem] object-cover",
               grayscaleAnimation && (showColor ? "grayscale-0" : "grayscale")

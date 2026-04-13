@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Pause, Play, RotateCcw, Square, Save, Trash2, Plus, Pencil, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,10 +36,15 @@ export function SessionPanel() {
   ])
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState("")
+  const editTopicInputRef = useRef<HTMLInputElement>(null)
 
   const activeTopic = topics.find((t) => t.isActive)
   const isSessionPlaying = sessionStatus === "playing"
 
+  /**
+   * What it does: starts or stops a 1-second interval that updates session and active topic timers.
+   * Why needed: timer state must stay synchronized with play/pause status and clean up intervals on state changes or unmount.
+   */
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null
 
@@ -58,6 +63,20 @@ export function SessionPanel() {
       if (interval) clearInterval(interval)
     }
   }, [isSessionPlaying])
+
+  /**
+   * What it does: focuses the topic title input after edit mode renders.
+   * Why needed: autoFocus was removed; without this, keyboard users must tab manually after pressing Edit.
+   */
+  useEffect(() => {
+    if (!editingTopicId) return
+
+    const frame = window.requestAnimationFrame(() => {
+      editTopicInputRef.current?.focus()
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [editingTopicId])
 
   const formatTime = useCallback((seconds: number) => {
     const hrs = Math.floor(seconds / 3600)
@@ -183,7 +202,7 @@ export function SessionPanel() {
               <div className="font-mono text-2xl font-bold tracking-tight tabular-nums dark:font-medium">
                 {formatTime(time)}
               </div>
-              <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="mt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {sessionStatus === "playing"
                   ? "Recording"
                   : sessionStatus === "paused"
@@ -235,6 +254,7 @@ export function SessionPanel() {
               onClick={resetTimer}
               className="rounded-md shadow-sm"
               title="Reset timer"
+              aria-label="Reset timer"
             >
               <RotateCcw className="size-4" />
             </Button>
@@ -244,6 +264,7 @@ export function SessionPanel() {
               onClick={stopSession}
               className="rounded-md shadow-sm"
               title="Stop session"
+              aria-label="Stop session"
             >
               <Square className="size-4" />
             </Button>
@@ -253,6 +274,7 @@ export function SessionPanel() {
               onClick={saveSession}
               className="rounded-md shadow-sm"
               title="Save session"
+              aria-label="Save session"
             >
               <Save className="size-4" />
             </Button>
@@ -275,7 +297,10 @@ export function SessionPanel() {
               value={activeTopic?.id}
               onValueChange={(value) => setActiveTopic(value)}
             >
-              <SelectTrigger className="min-w-0 flex-1 rounded-md border-input bg-background text-foreground shadow-xs">
+              <SelectTrigger
+                className="min-w-0 flex-1 rounded-md border-input bg-background text-foreground shadow-xs"
+                aria-label={`Select ${TOPIC_LABEL.toLowerCase()}`}
+              >
                 <SelectValue placeholder={`Select ${TOPIC_LABEL.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
@@ -292,6 +317,7 @@ export function SessionPanel() {
               className="shrink-0 rounded-md border-input bg-background text-foreground shadow-xs hover:bg-accent"
               onClick={addTopic}
               title="Add new topic"
+              aria-label="Add new topic"
             >
               <Plus className="size-4" />
             </Button>
@@ -305,10 +331,11 @@ export function SessionPanel() {
                   /* Editing Mode */
                   <div className="flex items-center gap-1.5">
                     <Input
+                      ref={editTopicInputRef}
                       value={editingTitle}
                       onChange={(e) => setEditingTitle(e.target.value)}
                       className="h-8 flex-1 rounded-md border-input bg-background text-sm text-foreground shadow-xs"
-                      autoFocus
+                      aria-label="Edit topic title"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") saveTopicTitle()
                         if (e.key === "Escape") cancelEditingTopic()
@@ -319,6 +346,7 @@ export function SessionPanel() {
                       size="icon"
                       onClick={saveTopicTitle}
                       className="size-7 shrink-0 rounded-md text-foreground hover:bg-accent"
+                      aria-label="Save topic title"
                     >
                       <Check className="size-4 text-primary" />
                     </Button>
@@ -327,6 +355,7 @@ export function SessionPanel() {
                       size="icon"
                       onClick={cancelEditingTopic}
                       className="size-7 shrink-0 rounded-md text-foreground hover:bg-accent"
+                      aria-label="Cancel editing topic title"
                     >
                       <X className="size-4" />
                     </Button>
@@ -343,6 +372,7 @@ export function SessionPanel() {
                         size="icon"
                         onClick={() => startEditingTopic(activeTopic)}
                         className="size-7 rounded-md text-foreground hover:bg-accent hover:text-foreground"
+                        aria-label="Edit topic"
                       >
                         <Pencil className="size-3.5" />
                       </Button>
@@ -352,6 +382,7 @@ export function SessionPanel() {
                         onClick={() => deleteTopic(activeTopic.id)}
                         disabled={topics.length === 1}
                         className="size-7 rounded-md text-foreground hover:bg-accent hover:text-destructive disabled:opacity-40"
+                        aria-label="Delete topic"
                       >
                         <Trash2 className="size-3.5" />
                       </Button>

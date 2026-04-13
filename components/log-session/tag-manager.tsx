@@ -95,6 +95,36 @@ function TagList({ items, onAdd, onUpdate, onDelete, itemType }: TagListProps) {
   const [newLabel, setNewLabel] = React.useState("")
   const [newColor, setNewColor] = React.useState(colorOptions[7].value) // Blue default
   const [searchQuery, setSearchQuery] = React.useState("")
+  const editInputRef = React.useRef<HTMLInputElement>(null)
+  const addInputRef = React.useRef<HTMLInputElement>(null)
+
+  /**
+   * What it does: focuses the inline edit input for the selected subject/hashtag row.
+   * Why needed: autoFocus was removed; without this, keyboard users must tab manually after pressing Edit.
+   */
+  React.useEffect(() => {
+    if (!editingId) return
+
+    const frame = window.requestAnimationFrame(() => {
+      editInputRef.current?.focus()
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [editingId])
+
+  /**
+   * What it does: focuses the new subject/hashtag input when add mode opens.
+   * Why needed: autoFocus was removed; without this, keyboard users must tab manually after pressing Add.
+   */
+  React.useEffect(() => {
+    if (!isAdding) return
+
+    const frame = window.requestAnimationFrame(() => {
+      addInputRef.current?.focus()
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [isAdding])
 
   const startEdit = (item: TagItem) => {
     setEditingId(item.id)
@@ -159,11 +189,12 @@ function TagList({ items, onAdd, onUpdate, onDelete, itemType }: TagListProps) {
                   <div className="flex items-center gap-2">
                     <ColorDot color={editColor} />
                     <Input
+                      ref={editInputRef}
                       value={editLabel}
                       onChange={(e) => setEditLabel(e.target.value)}
                       placeholder={`Enter ${itemType} name...`}
                       className="h-8 flex-1"
-                      autoFocus
+                      aria-label={`Edit ${itemType} name`}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") saveEdit(item.id)
                         if (e.key === "Escape") cancelEdit()
@@ -223,11 +254,12 @@ function TagList({ items, onAdd, onUpdate, onDelete, itemType }: TagListProps) {
           <div className="flex items-center gap-2">
             <ColorDot color={newColor} />
             <Input
+              ref={addInputRef}
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder={`Enter ${itemType} name...`}
               className="h-8 flex-1"
-              autoFocus
+              aria-label={`New ${itemType} name`}
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleAdd()
                 if (e.key === "Escape") setIsAdding(false)

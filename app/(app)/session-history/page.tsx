@@ -822,7 +822,7 @@ function SessionHistoryPageContent() {
                 value={String(table.getState().pagination.pageSize)}
                 onValueChange={(value) => table.setPageSize(Number.parseInt(value, 10))}
               >
-                <SelectTrigger className="w-[70px] font-medium">
+                <SelectTrigger className="w-[70px] font-medium" aria-label="Rows per page">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -843,6 +843,8 @@ function SessionHistoryPageContent() {
                 className="size-8 shrink-0 sm:size-9"
                 onClick={() => table.firstPage()}
                 disabled={!table.getCanPreviousPage()}
+                aria-label="Go to first page"
+                title="Go to first page"
               >
                 <ChevronsLeft className="size-4 shrink-0" />
               </Button>
@@ -852,6 +854,8 @@ function SessionHistoryPageContent() {
                 className="size-8 shrink-0 sm:size-9"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
+                aria-label="Go to previous page"
+                title="Go to previous page"
               >
                 <ChevronLeft className="size-4 shrink-0" />
               </Button>
@@ -861,6 +865,8 @@ function SessionHistoryPageContent() {
                 className="size-8 shrink-0 sm:size-9"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
+                aria-label="Go to next page"
+                title="Go to next page"
               >
                 <ChevronRight className="size-4 shrink-0" />
               </Button>
@@ -870,6 +876,8 @@ function SessionHistoryPageContent() {
                 className="size-8 shrink-0 sm:size-9"
                 onClick={() => table.lastPage()}
                 disabled={!table.getCanNextPage()}
+                aria-label="Go to last page"
+                title="Go to last page"
               >
                 <ChevronsRight className="size-4 shrink-0" />
               </Button>

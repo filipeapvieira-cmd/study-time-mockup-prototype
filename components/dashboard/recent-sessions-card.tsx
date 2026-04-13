@@ -115,7 +115,7 @@ export function RecentSessionsCard() {
                     <Clock className="size-3" />
                     {formatDurationHuman(session.durationSeconds)}
                   </span>
-                  <span className="text-xs text-muted-foreground/70">
+                  <span className="text-xs text-muted-foreground">
                     {formatDistanceToNow(parseISO(session.createdAt), {
                       addSuffix: true,
                     })}

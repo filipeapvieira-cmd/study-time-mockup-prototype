@@ -586,7 +586,7 @@ export function SessionEditorSheet({
                         onValueChange={handleTopicSelect}
                         disabled={isTopicEditable || topics.length === 0}
                       >
-                        <SelectTrigger className="h-9 w-full">
+                        <SelectTrigger className="h-9 w-full" aria-label={`Select ${TOPIC_LABEL.toLowerCase()}`}>
                           <SelectValue placeholder={`Select a ${TOPIC_LABEL.toLowerCase()}...`} />
                         </SelectTrigger>
                         <SelectContent>
@@ -674,10 +674,16 @@ export function SessionEditorSheet({
                               size="sm"
                               onClick={saveTopicEdit}
                               disabled={Boolean(topicValidationMessage)}
+                              aria-label="Save topic changes"
                             >
                               <Check className="size-4" />
                             </Button>
-                            <Button size="sm" variant="outline" onClick={cancelTopicEdit}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={cancelTopicEdit}
+                              aria-label="Cancel topic changes"
+                            >
                               <X className="size-4" />
                             </Button>
                           </>
@@ -689,6 +695,7 @@ export function SessionEditorSheet({
                               className="size-9"
                               onClick={startEditTopic}
                               disabled={!selectedTopic}
+                              aria-label="Edit topic"
                             >
                               <Pencil className="size-4" />
                             </Button>
@@ -698,6 +705,7 @@ export function SessionEditorSheet({
                               className="size-9 text-destructive hover:text-destructive"
                               onClick={deleteTopic}
                               disabled={!selectedTopic || topics.length <= 1}
+                              aria-label="Delete topic"
                             >
                               <Trash2 className="size-4" />
                             </Button>
@@ -707,6 +715,7 @@ export function SessionEditorSheet({
                               className="size-9"
                               onClick={startAddTopic}
                               disabled={!canAddTopic}
+                              aria-label="Add topic"
                             >
                               <Plus className="size-4" />
                             </Button>
