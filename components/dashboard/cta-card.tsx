@@ -1,6 +1,7 @@
 import { Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Highlighter } from "@/components/ui/highlighter"
 import { mockUserFirstName } from "@/lib/mock-user"
 import Image from "next/image"
 import Link from "next/link"
@@ -29,8 +30,15 @@ export function CtaCard() {
         </h2>
         
         <p className="text-muted-foreground max-w-md">
-          The quiet mind is the most productive. Your study session is ready
-          whenever you are.
+          The{" "}
+          <Highlighter
+            action="underline"
+            color="var(--chart-5)"
+            strokeWidth={2}
+            iterations={1}
+          >
+            quiet mind is the most productive
+          </Highlighter>. Your study session is ready whenever you are.
         </p>
         
         <div className="flex flex-wrap gap-3 pt-2">
