@@ -44,7 +44,10 @@ const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as cons
 const barChartConfig = {
   hours: {
     label: "Hours",
-    color: "hsl(var(--foreground))",
+    theme: {
+      light: "var(--chart-1)",
+      dark: "var(--chart-2)",
+    },
   },
 } satisfies ChartConfig
 
@@ -53,7 +56,10 @@ const pieChartConfig = {} satisfies ChartConfig
 const startHourChartConfig = {
   hours: {
     label: "Hours",
-    color: "hsl(var(--muted))",
+    theme: {
+      light: "var(--chart-2)",
+      dark: "var(--chart-4)",
+    },
   },
 } satisfies ChartConfig
 
@@ -289,7 +295,7 @@ export default function AnalyticsPage() {
               <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
               <Bar
                 dataKey="hours"
-                fill="hsl(var(--foreground))"
+                fill="var(--color-hours)"
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>
@@ -379,13 +385,13 @@ export default function AnalyticsPage() {
                   <linearGradient id="startHourGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop
                       offset="0%"
-                      stopColor="hsl(var(--muted-foreground))"
-                      stopOpacity={0.3}
+                      stopColor="var(--color-hours)"
+                      stopOpacity={0.55}
                     />
                     <stop
                       offset="100%"
-                      stopColor="hsl(var(--muted-foreground))"
-                      stopOpacity={0.05}
+                      stopColor="var(--color-hours)"
+                      stopOpacity={0.15}
                     />
                   </linearGradient>
                 </defs>
@@ -402,8 +408,8 @@ export default function AnalyticsPage() {
                 <Area
                   type="monotone"
                   dataKey="hours"
-                  stroke="hsl(var(--muted-foreground))"
-                  strokeWidth={2}
+                  stroke="var(--color-hours)"
+                  strokeWidth={3}
                   fill="url(#startHourGradient)"
                 />
               </AreaChart>

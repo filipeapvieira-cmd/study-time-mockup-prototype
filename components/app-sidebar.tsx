@@ -9,12 +9,13 @@ import {
   ChevronsUpDown,
   LogOut,
   Settings,
-  User,
+  Moon,
   GraduationCap,
   PanelLeft,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useTheme } from "next-themes"
 
 import { mockUser, mockUserInitials } from "@/lib/mock-user"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -27,6 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Switch } from "@/components/ui/switch"
 import {
   Sidebar,
   SidebarContent,
@@ -68,8 +70,10 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const { resolvedTheme, setTheme } = useTheme()
   const { isMobile, open, toggleSidebar } = useSidebar()
   const [isHovered, setIsHovered] = useState(false)
+  const isDarkMode = resolvedTheme === "dark"
 
   return (
     <Sidebar collapsible="icon">
@@ -227,9 +231,20 @@ export function AppSidebar() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem>
-                    <User />
-                    Profile
+                  <DropdownMenuItem
+                    onSelect={(event) => {
+                      event.preventDefault()
+                      setTheme(isDarkMode ? "light" : "dark")
+                    }}
+                  >
+                    <Moon />
+                    Dark mode
+                    <Switch
+                      checked={isDarkMode}
+                      className="ml-auto pointer-events-none"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    />
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Settings />

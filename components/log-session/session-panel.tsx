@@ -180,7 +180,7 @@ export function SessionPanel() {
           {/* Timer Display Card */}
           <div className="rounded-lg bg-muted/40 p-4">
             <div className="text-center">
-              <div className="font-mono text-2xl font-bold tracking-tight tabular-nums">
+              <div className="font-mono text-2xl font-bold tracking-tight tabular-nums dark:font-medium">
                 {formatTime(time)}
               </div>
               <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">

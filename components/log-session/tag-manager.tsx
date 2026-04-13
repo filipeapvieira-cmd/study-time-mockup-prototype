@@ -313,7 +313,7 @@ export function TagManager({
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Manage Tags</DialogTitle>
+          <DialogTitle>Manage Subjects and Tags</DialogTitle>
           <DialogDescription>
             Add, edit, or remove subjects and hashtags with custom colors.
           </DialogDescription>
