@@ -97,7 +97,7 @@ export function AppSidebar() {
             {!isMobile && open && (
               <div className="flex items-center gap-2">
                 <SidebarMenuButton size="lg" asChild className="flex-1">
-                  <Link href="/dashboard">
+                  <Link href="/">
                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                       <GraduationCap className="size-4" />
                     </div>
