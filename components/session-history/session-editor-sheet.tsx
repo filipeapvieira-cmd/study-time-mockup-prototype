@@ -56,6 +56,10 @@ import {
   PROTOTYPE_HASHTAGS,
   PROTOTYPE_SUBJECTS,
 } from "@/lib/study-taxonomy"
+import {
+  cloneReflection,
+  createEmptyReflection,
+} from "@/lib/session-reflection"
 import type { TagItem } from "@/types/tag"
 import {
   type StudySession,
@@ -102,7 +106,9 @@ export function SessionEditorSheet({
 }: SessionEditorSheetProps) {
   const [selectedSubject, setSelectedSubject] = React.useState("")
   const [selectedHashtags, setSelectedHashtags] = React.useState<string[]>([])
-  const [reflection, setReflection] = React.useState("")
+  const [reflection, setReflection] = React.useState<SessionTopic["reflection"]>(
+    createEmptyReflection,
+  )
 
   const [startTime, setStartTime] = React.useState("09:00")
   const [endTime, setEndTime] = React.useState("10:00")
@@ -132,7 +138,7 @@ export function SessionEditorSheet({
   const loadTopicIntoForm = React.useCallback((topic?: SessionTopic | null) => {
     setSelectedSubject(topic?.subject ?? "")
     setSelectedHashtags(topic?.hashtags ?? [])
-    setReflection(topic?.reflection ?? "")
+    setReflection(topic ? cloneReflection(topic.reflection) : createEmptyReflection())
     setEditTopicDuration(durationToParts(topic?.duration ?? 0))
   }, [])
 
@@ -187,7 +193,11 @@ export function SessionEditorSheet({
       topicLoadTimeoutRef.current = null
     }
 
-    const initialTopics = session.topics
+    const initialTopics = session.topics.map((topic) => ({
+      ...topic,
+      hashtags: [...topic.hashtags],
+      reflection: cloneReflection(topic.reflection),
+    }))
     const requestedTopic = initialTopicId
       ? initialTopics.find((topic) => topic.id === initialTopicId) ?? null
       : null
@@ -241,7 +251,7 @@ export function SessionEditorSheet({
         subjectLabel: subjectData?.label ?? "",
         subjectColor: subjectData?.color ?? "",
         hashtags: selectedHashtags,
-        reflection,
+        reflection: cloneReflection(reflection),
       }
     },
     [reflection, selectedHashtags, selectedSubject, subjects, topicDurationSeconds],
@@ -286,7 +296,7 @@ export function SessionEditorSheet({
       subjectLabel: nextSubject.label,
       subjectColor: nextSubject.color,
       hashtags: [],
-      reflection: "",
+      reflection: createEmptyReflection(),
     }
 
     setTopics([...nextTopics, draftTopic])
@@ -458,6 +468,7 @@ export function SessionEditorSheet({
                   Reflection
                 </h3>
                 <SessionReflectionField
+                  key={selectedTopicId ?? "reflection-field"}
                   value={reflection}
                   onChange={setReflection}
                   placeholder="Your topic reflection..."

@@ -3,6 +3,8 @@
 import React from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { format, isToday, isYesterday, parseISO } from "date-fns"
+import type { Value } from "platejs"
+import { usePlateViewEditor } from "platejs/react"
 import {
   type ColumnDef,
   type FilterFn,
@@ -31,6 +33,7 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { EditorView } from "@/components/ui/editor"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -54,9 +57,15 @@ import {
 } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { BaseBasicNodesKit } from "@/components/basic-nodes-base-kit"
 import { SessionEditorSheet } from "@/components/session-history/session-editor-sheet"
 import { TEMP_STUDY_SESSIONS } from "@/lib/session-dummy-data"
 import { buildSessionHistoryPdf } from "@/lib/session-history-pdf"
+import {
+  cloneReflection,
+  isReflectionEmpty,
+  reflectionToSearchText,
+} from "@/lib/session-reflection"
 import {
   buildSessionHistoryEditorHref,
   buildSessionHistoryListHref,
@@ -106,8 +115,31 @@ function cloneStudySessions(sessions: StudySession[]): StudySession[] {
     topics: session.topics.map((topic) => ({
       ...topic,
       hashtags: [...topic.hashtags],
+      reflection: cloneReflection(topic.reflection),
     })),
   }))
+}
+
+function TopicReflectionPreview({ value }: { value: Value }) {
+  const editor = usePlateViewEditor(
+    {
+      plugins: BaseBasicNodesKit,
+      value,
+    },
+    [value],
+  )
+
+  if (!editor) {
+    return null
+  }
+
+  return (
+    <EditorView
+      editor={editor}
+      variant="none"
+      className="cursor-pointer text-sm text-foreground/80 [&_p]:my-0 [&_p]:py-0.5"
+    />
+  )
 }
 
 const sessionGlobalFilterFn: FilterFn<StudySession> = (
@@ -207,7 +239,10 @@ function SessionHistoryPageContent() {
         id: "subject",
         accessorFn: (session) =>
           session.topics
-            .map((topic) => `${topic.subjectLabel} ${topic.reflection} ${topic.hashtags.join(" ")}`)
+            .map(
+              (topic) =>
+                `${topic.subjectLabel} ${reflectionToSearchText(topic.reflection)} ${topic.hashtags.join(" ")}`,
+            )
             .join(" "),
         header: "Subject",
         enableSorting: false,
@@ -326,7 +361,7 @@ function SessionHistoryPageContent() {
   const replaceRoute = React.useCallback(
     (nextHref: string) => {
       if (nextHref !== currentHref) {
-        router.replace(nextHref)
+        router.replace(nextHref, { scroll: false })
       }
     },
     [currentHref, router]
@@ -728,10 +763,10 @@ function SessionHistoryPageContent() {
                                     </div>
                                   ) : null}
 
-                                  {topic.reflection ? (
-                                    <p className="overflow-hidden text-sm text-foreground/80 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:10]">
-                                      {topic.reflection}
-                                    </p>
+                                  {!isReflectionEmpty(topic.reflection) ? (
+                                    <div className="max-h-40 overflow-hidden">
+                                      <TopicReflectionPreview value={topic.reflection} />
+                                    </div>
                                   ) : (
                                     <p className="overflow-hidden text-sm italic text-muted-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:10]">
                                       No reflection logged for this topic.

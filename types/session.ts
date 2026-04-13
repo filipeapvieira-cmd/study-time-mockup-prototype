@@ -1,4 +1,5 @@
 // Types for Study Session management
+import type { Value } from "platejs"
 
 export interface SessionTopic {
   id: string
@@ -7,7 +8,7 @@ export interface SessionTopic {
   subjectLabel: string
   subjectColor: string
   hashtags: string[]
-  reflection: string
+  reflection: Value
 }
 
 export interface StudySession {

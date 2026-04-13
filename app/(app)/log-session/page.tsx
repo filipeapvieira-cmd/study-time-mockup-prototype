@@ -8,6 +8,7 @@ import { HashtagMultiSelect } from "@/components/session-fields/hashtag-multi-se
 import { SessionReflectionField } from "@/components/session-fields/session-reflection-field";
 import { SubjectSelect } from "@/components/session-fields/subject-select";
 import { Button } from "@/components/ui/button";
+import { createEmptyReflection } from "@/lib/session-reflection";
 import {
   cloneTagItems,
   PROTOTYPE_HASHTAGS,
@@ -18,7 +19,7 @@ import type { TagItem } from "@/types/tag";
 export default function LogSessionPage() {
   const [selectedSubject, setSelectedSubject] = React.useState("");
   const [selectedHashtags, setSelectedHashtags] = React.useState<string[]>([]);
-  const [content, setContent] = React.useState("");
+  const [content, setContent] = React.useState(createEmptyReflection);
   const [subjects, setSubjects] = React.useState<TagItem[]>(() =>
     cloneTagItems(PROTOTYPE_SUBJECTS),
   );

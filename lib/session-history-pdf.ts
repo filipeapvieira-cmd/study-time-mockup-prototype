@@ -20,6 +20,7 @@
 import { format, parseISO } from "date-fns"
 
 import type { jsPDF as JsPdfClass } from "jspdf"
+import { isReflectionEmpty, reflectionToPlainText } from "@/lib/session-reflection"
 import type { StudySession } from "@/types/session"
 
 export type JsPdfConstructor = typeof JsPdfClass
@@ -166,10 +167,9 @@ function buildTopicRenderData(
     topic.hashtags.length > 0
       ? topic.hashtags.map((tag) => `#${tag}`).join(" ")
       : "No hashtags"
-  const reflectionText =
-    topic.reflection.trim().length > 0
-      ? topic.reflection.trim()
-      : "No reflection logged for this topic."
+  const reflectionText = isReflectionEmpty(topic.reflection)
+    ? "No reflection logged for this topic."
+    : reflectionToPlainText(topic.reflection)
 
   const hashtagsLines = doc.splitTextToSize(hashtagsText, maxWidth)
   const reflectionLines = doc.splitTextToSize(reflectionText, maxWidth)

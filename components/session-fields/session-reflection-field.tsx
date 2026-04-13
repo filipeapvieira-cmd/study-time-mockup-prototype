@@ -1,13 +1,20 @@
 "use client"
 
 import * as React from "react"
+import { Bold, Code, Highlighter, Italic, Strikethrough, Underline } from "lucide-react"
+import type { Value } from "platejs"
+import { Plate, usePlateEditor } from "platejs/react"
 
-import { Textarea } from "@/components/ui/textarea"
+import { BasicNodesKit } from "@/components/basic-nodes-kit"
+import { Editor, EditorContainer } from "@/components/ui/editor"
+import { MarkToolbarButton } from "@/components/ui/mark-toolbar-button"
+import { Toolbar, ToolbarGroup } from "@/components/ui/toolbar"
+import { cloneReflection, reflectionToPlainText } from "@/lib/session-reflection"
 import { cn } from "@/lib/utils"
 
 interface SessionReflectionFieldProps {
-  value: string
-  onChange: (value: string) => void
+  value: Value
+  onChange: (value: Value) => void
   placeholder: string
   className?: string
   textareaClassName?: string
@@ -22,20 +29,67 @@ export function SessionReflectionField({
   textareaClassName,
   footer,
 }: SessionReflectionFieldProps) {
-  const wordCount = value.trim() ? value.trim().split(/\s+/).length : 0
+  const editor = usePlateEditor(
+    {
+      plugins: BasicNodesKit,
+      value: cloneReflection(value),
+    },
+    [],
+  )
+
+  const plainText = React.useMemo(() => reflectionToPlainText(value), [value])
+  const wordCount = plainText ? plainText.split(/\s+/).length : 0
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       <div className="relative flex-1">
-        <Textarea
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-          className={cn(
-            "min-h-[250px] resize-none rounded-lg border-0 bg-muted/30 px-5 py-4 text-base leading-relaxed placeholder:text-muted-foreground/50 shadow-none focus-visible:ring-2 focus-visible:ring-ring/20",
-            textareaClassName,
-          )}
-        />
+        <Plate
+          editor={editor}
+          onChange={({ value: nextValue }) =>
+            onChange(cloneReflection(nextValue as Value))
+          }
+        >
+          <EditorContainer
+            className={cn(
+              "min-h-[250px] rounded-lg border-0 bg-muted/30 px-5 py-4 shadow-none focus-within:ring-2 focus-within:ring-ring/20",
+              textareaClassName,
+            )}
+          >
+            <Toolbar className="mb-2 flex-wrap gap-1 border-b border-border/50 pb-2">
+              <ToolbarGroup>
+                <MarkToolbarButton nodeType="bold" tooltip="Bold (Ctrl+B)">
+                  <Bold className="size-4" />
+                </MarkToolbarButton>
+                <MarkToolbarButton nodeType="italic" tooltip="Italic (Ctrl+I)">
+                  <Italic className="size-4" />
+                </MarkToolbarButton>
+                <MarkToolbarButton nodeType="underline" tooltip="Underline (Ctrl+U)">
+                  <Underline className="size-4" />
+                </MarkToolbarButton>
+                <MarkToolbarButton
+                  nodeType="strikethrough"
+                  tooltip="Strikethrough (Ctrl+Shift+X)"
+                >
+                  <Strikethrough className="size-4" />
+                </MarkToolbarButton>
+                <MarkToolbarButton nodeType="code" tooltip="Code (Ctrl+E)">
+                  <Code className="size-4" />
+                </MarkToolbarButton>
+                <MarkToolbarButton nodeType="highlight" tooltip="Highlight (Ctrl+Shift+H)">
+                  <Highlighter className="size-4" />
+                </MarkToolbarButton>
+              </ToolbarGroup>
+              <span className="text-muted-foreground ml-auto text-[11px]">
+                Headings: Ctrl+Alt+1..6
+              </span>
+            </Toolbar>
+            <Editor
+              variant="none"
+              placeholder={placeholder}
+              className="min-h-[190px] px-0 py-1 text-base leading-relaxed placeholder:text-muted-foreground/50 [&_p]:py-0 **:data-slate-placeholder:!top-0 **:data-slate-placeholder:!translate-y-0"
+            />
+          </EditorContainer>
+        </Plate>
       </div>
       <div
         className={cn(

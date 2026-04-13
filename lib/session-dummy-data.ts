@@ -1,7 +1,10 @@
 import { getTagItemByValue, PROTOTYPE_SUBJECTS } from "@/lib/study-taxonomy"
+import { createReflectionFromText } from "@/lib/session-reflection"
 import type { SessionTopic, StudySession } from "@/types/session"
 
-type SampleTopicConfig = Omit<SessionTopic, "subjectLabel" | "subjectColor">
+type SampleTopicConfig = Omit<SessionTopic, "subjectLabel" | "subjectColor" | "reflection"> & {
+  reflection: string
+}
 type SampleSessionConfig = Omit<StudySession, "topics"> & {
   topics: SampleTopicConfig[]
 }
@@ -230,7 +233,7 @@ function createTopic(topic: SampleTopicConfig): SessionTopic {
     ...topic,
     subjectLabel: subject.label,
     subjectColor: subject.color,
-    reflection: buildTopicReflection(topic, subject.label),
+    reflection: createReflectionFromText(buildTopicReflection(topic, subject.label)),
   }
 }
 
