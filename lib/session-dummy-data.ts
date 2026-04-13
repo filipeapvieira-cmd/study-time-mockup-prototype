@@ -1,5 +1,4 @@
 import { getTagItemByValue, PROTOTYPE_SUBJECTS } from "@/lib/study-taxonomy"
-import { createReflectionFromText } from "@/lib/session-reflection"
 import type { SessionTopic, StudySession } from "@/types/session"
 
 type SampleTopicConfig = Omit<SessionTopic, "subjectLabel" | "subjectColor" | "reflection"> & {
@@ -163,8 +162,123 @@ const REFLECTION_LINE_FACTORIES: readonly ((
     `Checkpoint ${lineNumber}: Summarized this segment in one sentence before moving to the next thread.`,
 ]
 
+type ReflectionLeaf = {
+  text: string
+  bold?: true
+  italic?: true
+  underline?: true
+  strikethrough?: true
+  code?: true
+  highlight?: true
+  kbd?: true
+}
+
+type ReflectionElementType = "p" | "h3" | "h4" | "blockquote" | "hr"
+type ReflectionElement = {
+  type: ReflectionElementType
+  children: ReflectionLeaf[]
+}
+
+function leaf(
+  text: string,
+  marks: Omit<ReflectionLeaf, "text"> = {},
+): ReflectionLeaf {
+  return { text, ...marks }
+}
+
+function paragraph(children: ReflectionLeaf[] | string): ReflectionElement {
+  return {
+    type: "p",
+    children: typeof children === "string" ? [leaf(children)] : children,
+  }
+}
+
+function heading(type: "h3" | "h4", text: string): ReflectionElement {
+  return {
+    type,
+    children: [leaf(text)],
+  }
+}
+
+function quote(text: string): ReflectionElement {
+  return {
+    type: "blockquote",
+    children: [leaf(text)],
+  }
+}
+
+function divider(): ReflectionElement {
+  return {
+    type: "hr",
+    children: [leaf("")],
+  }
+}
+
 function normalizeReflectionText(value: string): string {
   return value.replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim()
+}
+
+function extractLabeledLine(
+  lines: string[],
+  label: string,
+  fallback: string,
+): string {
+  const lowerLabel = `${label.toLowerCase()}:`
+  const match = lines.find((line) => line.toLowerCase().startsWith(lowerLabel))
+  const raw = match ? match.slice(label.length + 1).trim() : fallback
+  return normalizeReflectionText(raw)
+}
+
+function stripCheckpointPrefix(line: string): string {
+  return normalizeReflectionText(line.replace(/^Checkpoint\s+\d+:\s*/i, ""))
+}
+
+function pickKeyTerm(text: string): string {
+  const tokens = normalizeReflectionText(text)
+    .replace(/[^a-z0-9#\- ]/gi, " ")
+    .split(/\s+/)
+    .filter((token) => token.length > 4 && !token.startsWith("#"))
+
+  if (tokens.length === 0) {
+    return "core-concept"
+  }
+
+  tokens.sort((a, b) => b.length - a.length)
+  return tokens[0]
+}
+
+function buildDetailNote(
+  line: string,
+  index: number,
+  highlightIndex: number,
+  taggedFocus: string | null,
+): ReflectionElement {
+  const cleaned = stripCheckpointPrefix(line)
+
+  if (!cleaned) {
+    return paragraph([leaf("• Logged progress checkpoint.", { italic: true })])
+  }
+
+  if (index === highlightIndex) {
+    return paragraph([leaf("• "), leaf(cleaned, { highlight: true })])
+  }
+
+  const styleMode = index % 3
+
+  if (styleMode === 0) {
+    return paragraph([leaf("• ", { bold: true }), leaf(cleaned, { underline: true })])
+  }
+
+  if (styleMode === 1 && taggedFocus) {
+    return paragraph([
+      leaf("• "),
+      leaf(cleaned),
+      leaf(" | focus "),
+      leaf(taggedFocus, { code: true }),
+    ])
+  }
+
+  return paragraph([leaf("• ", { bold: true }), leaf(cleaned, { italic: true })])
 }
 
 function getReflectionSeed(topic: SampleTopicConfig): number {
@@ -222,6 +336,104 @@ function buildTopicReflection(
   return lines.slice(0, REFLECTION_MAX_LINES).join("\n")
 }
 
+function buildRichTopicReflection(
+  topic: SampleTopicConfig,
+  subjectLabel: string,
+): SessionTopic["reflection"] {
+  const seed = getReflectionSeed(topic)
+  const richSource = buildTopicReflection(topic, subjectLabel)
+  const lines = richSource
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const fallbackSummary = normalizeReflectionText(topic.reflection)
+  const summary = extractLabeledLine(lines, "Summary", fallbackSummary)
+  const subjectFocus = extractLabeledLine(
+    lines,
+    "Subject focus",
+    `Deepened understanding in ${subjectLabel}.`,
+  )
+  const tagLine = extractLabeledLine(
+    lines,
+    "Tags in play",
+    topic.hashtags.length > 0 ? topic.hashtags.map((tag) => `#${tag}`).join(" ") : "#general",
+  )
+  const focusedDuration = extractLabeledLine(
+    lines,
+    "Focused duration",
+    `${Math.max(1, Math.round(topic.duration / 60))} minutes`,
+  )
+
+  const checkpointLines = lines.filter((line) =>
+    /^Checkpoint\s+\d+:/i.test(line),
+  )
+  const detailCount = Math.min(
+    checkpointLines.length,
+    Math.max(6, 8 + (seed % 8)),
+  )
+  const detailLines = checkpointLines.slice(0, detailCount)
+  const highlightIndex =
+    detailLines.length > 0 ? seed % detailLines.length : 0
+  const taggedFocus =
+    topic.hashtags.length > 0
+      ? `#${topic.hashtags[seed % topic.hashtags.length]}`
+      : null
+  const strongestSignal = detailLines[highlightIndex] ?? summary
+  const keyTerm = pickKeyTerm(strongestSignal)
+  const nextAnchorLine = detailLines[detailLines.length - 1] ?? strongestSignal
+
+  const nodes: ReflectionElement[] = [
+    heading("h3", `${subjectLabel} Session Log`),
+    paragraph([
+      leaf("Objective: ", { bold: true }),
+      leaf(summary),
+    ]),
+    paragraph([
+      leaf("Focus: ", { bold: true }),
+      leaf(subjectFocus, { italic: true }),
+    ]),
+    paragraph([
+      leaf("Timebox: ", { bold: true }),
+      leaf(focusedDuration),
+      leaf(" | Tags: ", { bold: true }),
+      leaf(tagLine, { highlight: true }),
+    ]),
+    quote(stripCheckpointPrefix(strongestSignal)),
+    divider(),
+    heading("h4", "Working Notes"),
+    ...detailLines.map((line, index) =>
+      buildDetailNote(line, index, highlightIndex, taggedFocus),
+    ),
+    heading("h4", "Next Session"),
+    paragraph([
+      leaf("Start with ", { bold: true }),
+      leaf(keyTerm, { code: true }),
+      leaf(" and validate against "),
+      leaf(taggedFocus ?? "#review", { highlight: true }),
+      leaf("."),
+    ]),
+    paragraph([
+      leaf("Carry forward: ", { bold: true }),
+      leaf(stripCheckpointPrefix(nextAnchorLine), { underline: true }),
+    ]),
+    paragraph([
+      leaf("Avoid: ", { bold: true }),
+      leaf("unstructured rereads", { strikethrough: true }),
+      leaf(" unless a specific knowledge gap is identified."),
+    ]),
+    paragraph([
+      leaf("Hotkey note: ", { bold: true }),
+      leaf("Ctrl+Alt+1", { kbd: true }),
+      leaf(" to title, then "),
+      leaf("Ctrl+Shift+H", { kbd: true }),
+      leaf(" to spotlight the key insight."),
+    ]),
+  ]
+
+  return nodes as SessionTopic["reflection"]
+}
+
 function createTopic(topic: SampleTopicConfig): SessionTopic {
   const subject = getTagItemByValue(PROTOTYPE_SUBJECTS, topic.subject)
 
@@ -233,7 +445,7 @@ function createTopic(topic: SampleTopicConfig): SessionTopic {
     ...topic,
     subjectLabel: subject.label,
     subjectColor: subject.color,
-    reflection: createReflectionFromText(buildTopicReflection(topic, subject.label)),
+    reflection: buildRichTopicReflection(topic, subject.label),
   }
 }
 
