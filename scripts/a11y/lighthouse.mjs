@@ -2,9 +2,33 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
-import { loadEnvConfig } from "@next/env";
+import { chromium } from "@playwright/test";
 
-loadEnvConfig(process.cwd());
+async function loadEnvironment() {
+  try {
+    const { loadEnvConfig } = await import("@next/env");
+    loadEnvConfig(process.cwd());
+    return;
+  } catch (error) {
+    if (error?.code !== "ERR_MODULE_NOT_FOUND") {
+      throw error;
+    }
+  }
+
+  if (typeof process.loadEnvFile === "function") {
+    for (const envFile of [".env.local", ".env"]) {
+      try {
+        process.loadEnvFile(path.join(process.cwd(), envFile));
+      } catch (error) {
+        if (error?.code !== "ENOENT") {
+          throw error;
+        }
+      }
+    }
+  }
+}
+
+await loadEnvironment();
 
 const ROUTES = [
   { id: "marketing-home", path: "/" },
@@ -20,6 +44,13 @@ const DEFAULT_PORT = process.env.A11Y_PORT ?? "3210";
 const EXPLICIT_BASE_URL = process.env.A11Y_BASE_URL ?? null;
 const DEFAULT_BASE_URL = `http://127.0.0.1:${DEFAULT_PORT}`;
 const PnpmBin = "pnpm";
+const CHROME_PATH = (() => {
+  try {
+    return chromium.executablePath();
+  } catch {
+    return null;
+  }
+})();
 const SPAWN_OPTIONS = {
   stdio: "inherit",
   shell: process.platform === "win32",
@@ -102,6 +133,7 @@ async function main() {
         "--output=json",
         "--output-path",
         outputPath,
+        ...(CHROME_PATH ? ["--chrome-path", CHROME_PATH] : []),
         "--chrome-flags=--headless=new",
         "--quiet",
       ]);

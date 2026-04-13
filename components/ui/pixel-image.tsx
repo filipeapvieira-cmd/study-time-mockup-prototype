@@ -62,11 +62,18 @@ export const PixelImage = ({
   }, [customGrid, grid])
 
   useEffect(() => {
-    setIsVisible(true)
+    const visibilityFrame = window.requestAnimationFrame(() => {
+      setIsVisible(true)
+    })
+
     const colorTimeout = setTimeout(() => {
       setShowColor(true)
     }, colorRevealDelay)
-    return () => clearTimeout(colorTimeout)
+
+    return () => {
+      window.cancelAnimationFrame(visibilityFrame)
+      clearTimeout(colorTimeout)
+    }
   }, [colorRevealDelay])
 
   const pieces = useMemo(() => {
@@ -75,14 +82,16 @@ export const PixelImage = ({
       const row = Math.floor(index / cols)
       const col = index % cols
 
-      const clipPath = `polygon(
-        ${col * (100 / cols)}% ${row * (100 / rows)}%,
-        ${(col + 1) * (100 / cols)}% ${row * (100 / rows)}%,
-        ${(col + 1) * (100 / cols)}% ${(row + 1) * (100 / rows)}%,
-        ${col * (100 / cols)}% ${(row + 1) * (100 / rows)}%
-      )`
+      const x1 = Number(((col * 100) / cols).toFixed(4))
+      const y1 = Number(((row * 100) / rows).toFixed(4))
+      const x2 = Number((((col + 1) * 100) / cols).toFixed(4))
+      const y2 = Number((((row + 1) * 100) / rows).toFixed(4))
 
-      const delay = Math.random() * maxAnimationDelay
+      const clipPath = `polygon(${x1}% ${y1}%, ${x2}% ${y1}%, ${x2}% ${y2}%, ${x1}% ${y2}%)`
+
+      // Keep delay deterministic so SSR and client hydration stay aligned.
+      const normalized = (Math.sin((index + 1) * 12.9898 + rows * 78.233 + cols * 37.719) + 1) / 2
+      const delay = Math.round(normalized * maxAnimationDelay)
       return {
         clipPath,
         delay,
@@ -107,7 +116,7 @@ export const PixelImage = ({
         >
           <img
             src={src}
-            alt={`Pixel image piece ${index + 1}`}
+            alt={`Pixel piece ${index + 1}`}
             className={cn(
               "z-1 h-full w-full rounded-[2.5rem] object-cover",
               grayscaleAnimation && (showColor ? "grayscale-0" : "grayscale")

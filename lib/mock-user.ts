@@ -1,7 +1,7 @@
 export const mockUser = {
   name: "John Doe",
   email: "john@example.com",
-  avatarSrc: "/avatar.jpg",
+  avatarSrc: "/placeholder-user.jpg",
 } as const
 
 export const mockUserInitials = mockUser.name
