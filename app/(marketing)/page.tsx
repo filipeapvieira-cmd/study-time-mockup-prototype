@@ -54,7 +54,7 @@ export default function HomePage() {
           <div className="relative overflow-visible">
             <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_35%_35%,rgba(131,102,242,0.2),transparent_60%)] blur-2xl" />
             <div className="relative mx-auto w-full max-w-[30rem] lg:translate-x-8 xl:translate-x-14">
-              <div className="origin-top-right translate-x-2 translate-y-1 rotate-[4deg]">
+              <div className="mx-auto w-fit origin-center rotate-[4deg] md:origin-top-right md:translate-x-2 md:translate-y-1">
                 <PixelImage
                   src="/images/landing_page.avif"
                   customGrid={{ rows: 4, cols: 6 }}
