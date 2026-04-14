@@ -89,6 +89,17 @@ function ReflectionEditor({
     [],
   )
 
+  React.useEffect(() => {
+    const incomingText = reflectionToPlainText(value)
+    const editorText = reflectionToPlainText(editor.children as Value)
+
+    if (incomingText === editorText) {
+      return
+    }
+
+    editor.tf.setValue(cloneReflection(value))
+  }, [editor, value])
+
   return (
     <Plate
       editor={editor}

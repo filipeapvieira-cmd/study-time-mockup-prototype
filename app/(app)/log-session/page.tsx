@@ -8,7 +8,13 @@ import { HashtagMultiSelect } from "@/components/session-fields/hashtag-multi-se
 import { SessionReflectionField } from "@/components/session-fields/session-reflection-field";
 import { SubjectSelect } from "@/components/session-fields/subject-select";
 import { Button } from "@/components/ui/button";
-import { createEmptyReflection } from "@/lib/session-reflection";
+import {
+  cloneReflection,
+  createReflectionFromText,
+  createEmptyReflection,
+  isReflectionEmpty,
+  reflectionToPlainText,
+} from "@/lib/session-reflection";
 import {
   cloneTagItems,
   PROTOTYPE_HASHTAGS,
@@ -20,6 +26,8 @@ export default function LogSessionPage() {
   const [selectedSubject, setSelectedSubject] = React.useState("");
   const [selectedHashtags, setSelectedHashtags] = React.useState<string[]>([]);
   const [content, setContent] = React.useState(createEmptyReflection);
+  const [focusRequestVersion, setFocusRequestVersion] = React.useState(0);
+  const reflectionFieldRef = React.useRef<HTMLDivElement | null>(null);
   const [subjects, setSubjects] = React.useState<TagItem[]>(() =>
     cloneTagItems(PROTOTYPE_SUBJECTS),
   );
@@ -27,6 +35,83 @@ export default function LogSessionPage() {
     cloneTagItems(PROTOTYPE_HASHTAGS),
   );
   const [aiSheetOpen, setAiSheetOpen] = React.useState(false);
+
+  const selectedSubjectItem = React.useMemo(
+    () => subjects.find((subject) => subject.value === selectedSubject),
+    [selectedSubject, subjects],
+  );
+  const selectedHashtagItems = React.useMemo(
+    () =>
+      selectedHashtags
+        .map((hashtagValue) =>
+          hashtags.find((hashtag) => hashtag.value === hashtagValue),
+        )
+        .filter((hashtag): hashtag is TagItem => Boolean(hashtag)),
+    [hashtags, selectedHashtags],
+  );
+  const reflectionText = React.useMemo(
+    () => reflectionToPlainText(content),
+    [content],
+  );
+
+  React.useEffect(() => {
+    if (!focusRequestVersion) {
+      return;
+    }
+
+    let secondFrameId = 0;
+    const firstFrameId = requestAnimationFrame(() => {
+      secondFrameId = requestAnimationFrame(() => {
+        const editable =
+          reflectionFieldRef.current?.querySelector<HTMLElement>(
+            '[contenteditable="true"]',
+          ) ?? null;
+
+        if (!editable) {
+          return;
+        }
+
+        editable.focus();
+
+        const selection = window.getSelection();
+        if (!selection) {
+          return;
+        }
+
+        const range = document.createRange();
+        range.selectNodeContents(editable);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(firstFrameId);
+      if (secondFrameId) {
+        cancelAnimationFrame(secondFrameId);
+      }
+    };
+  }, [focusRequestVersion]);
+
+  const handleQuestionSelect = React.useCallback((question: string) => {
+    setContent((previousContent) => {
+      const questionReflection = createReflectionFromText(question);
+      const trailingLine = createEmptyReflection();
+
+      if (isReflectionEmpty(previousContent)) {
+        return [...questionReflection, ...trailingLine];
+      }
+
+      return [
+        ...cloneReflection(previousContent),
+        ...questionReflection,
+        ...trailingLine,
+      ];
+    });
+    setAiSheetOpen(false);
+    setFocusRequestVersion((previousVersion) => previousVersion + 1);
+  }, []);
 
   return (
     <div className="flex h-full flex-col">
@@ -57,7 +142,7 @@ export default function LogSessionPage() {
           </div>
         </div>
 
-        <div className="mt-8 flex flex-1 flex-col">
+        <div ref={reflectionFieldRef} className="mt-8 flex flex-1 flex-col">
           <SessionReflectionField
             value={content}
             onChange={setContent}
@@ -80,7 +165,16 @@ export default function LogSessionPage() {
         </div>
       </div>
 
-      <AIQuestionsSheet open={aiSheetOpen} onOpenChange={setAiSheetOpen} />
+      <AIQuestionsSheet
+        open={aiSheetOpen}
+        onOpenChange={setAiSheetOpen}
+        subjectValue={selectedSubject}
+        subjectLabel={selectedSubjectItem?.label ?? ""}
+        hashtags={selectedHashtags}
+        hashtagLabels={selectedHashtagItems.map((item) => item.label)}
+        reflectionText={reflectionText}
+        onQuestionSelect={handleQuestionSelect}
+      />
     </div>
   );
 }
