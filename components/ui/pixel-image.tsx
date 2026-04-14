@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import Image from "next/image"
 
 import { cn } from "@/lib/utils"
 
@@ -114,10 +115,12 @@ export const PixelImage = ({
             transitionDuration: `${pixelFadeInDuration}ms`,
           }}
         >
-          <img
+          <Image
             src={src}
             alt=""
             aria-hidden="true"
+            fill
+            sizes="(max-width: 768px) 18rem, 24rem"
             className={cn(
               "z-1 h-full w-full rounded-[2.5rem] object-cover",
               grayscaleAnimation && (showColor ? "grayscale-0" : "grayscale")
@@ -128,6 +131,7 @@ export const PixelImage = ({
                 : "none",
             }}
             draggable={false}
+            unoptimized
           />
         </div>
       ))}

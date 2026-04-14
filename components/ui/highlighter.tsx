@@ -38,17 +38,16 @@ export function Highlighter({
   isView = false,
 }: HighlighterProps) {
   const elementRef = useRef<HTMLSpanElement>(null)
+  const supportsIntersectionObserver = typeof IntersectionObserver !== "undefined"
   const [isInView, setIsInView] = useState(!isView)
 
   useEffect(() => {
-    if (!isView) {
-      setIsInView(true)
+    if (!isView || !supportsIntersectionObserver) {
       return
     }
 
     const element = elementRef.current
-    if (!element || typeof IntersectionObserver === "undefined") {
-      setIsInView(true)
+    if (!element) {
       return
     }
 
@@ -69,10 +68,10 @@ export function Highlighter({
     observer.observe(element)
 
     return () => observer.disconnect()
-  }, [isView])
+  }, [isView, supportsIntersectionObserver])
 
   // If isView is false, always show. If isView is true, wait for inView
-  const shouldShow = !isView || isInView
+  const shouldShow = !isView || !supportsIntersectionObserver || isInView
 
   useLayoutEffect(() => {
     const element = elementRef.current

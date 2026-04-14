@@ -1,7 +1,7 @@
 import nextVitals from "eslint-config-next/core-web-vitals";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 
-export default [
+const config = [
   {
     ignores: [
       "node_modules/**",
@@ -20,3 +20,5 @@ export default [
     },
   },
 ];
+
+export default config;

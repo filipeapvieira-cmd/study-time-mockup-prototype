@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sun } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 const motivationalQuotes = [
   {
@@ -43,12 +43,10 @@ const motivationalQuotes = [
 ]
 
 export function QuotesCard() {
-  const [currentQuote, setCurrentQuote] = useState(motivationalQuotes[0])
-
-  useEffect(() => {
+  const [currentQuote] = useState(() => {
     const randomIndex = Math.floor(Math.random() * motivationalQuotes.length)
-    setCurrentQuote(motivationalQuotes[randomIndex])
-  }, [])
+    return motivationalQuotes[randomIndex]
+  })
 
   return (
     <Card className="h-full flex min-h-0 flex-col gap-3 py-5">
