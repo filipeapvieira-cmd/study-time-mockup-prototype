@@ -13,7 +13,10 @@ import {
 } from "date-fns"
 import { Bar, BarChart, XAxis, YAxis, Pie, PieChart, Cell, Area, AreaChart } from "recharts"
 
-import { AIInsightPanel } from "@/components/analytics/ai-insight-panel"
+import {
+  AIInsightPanel,
+  type AnalyticsInsightPanelState,
+} from "@/components/analytics/ai-insight-panel"
 import { StudyActivityCalendar } from "@/components/analytics/study-activity-calendar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -26,7 +29,9 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { buildAnalyticsInsights } from "@/lib/analytics-insights"
+import { parseAiJsonResponse } from "@/lib/ai/client"
+import { analyticsInsightsResponseSchema } from "@/lib/ai/contracts"
+import { buildAnalyticsInsightsRequest } from "@/lib/analytics-ai-evidence"
 import { TEMP_STUDY_SESSIONS } from "@/lib/session-dummy-data"
 
 type AnalyticsPeriod = "week" | "month" | "year"
@@ -85,6 +90,11 @@ function formatStartHourLabel(hour: number): string {
 export default function AnalyticsPage() {
   const [period, setPeriod] = React.useState<AnalyticsPeriod>("month")
   const [showAiInsights, setShowAiInsights] = React.useState(false)
+  const [aiInsightState, setAiInsightState] =
+    React.useState<AnalyticsInsightPanelState>({
+      status: "idle",
+      rangeLabel: "the selected range",
+    })
   const [dateRange, setDateRange] = React.useState<AnalyticsDateRange>({
     from: undefined,
     to: undefined,
@@ -157,6 +167,19 @@ export default function AnalyticsPage() {
       return true
     })
   }, [activeRange.from, activeRange.to])
+
+  const latestFilteredSessionDate = React.useMemo(() => {
+    if (filteredSessions.length === 0) {
+      return undefined
+    }
+
+    const latestDate = filteredSessions.reduce(
+      (latest, session) => (session.date > latest ? session.date : latest),
+      filteredSessions[0].date
+    )
+
+    return parseISO(latestDate)
+  }, [filteredSessions])
 
   const timeDistributionData = React.useMemo(() => {
     const totalsByDay = new Map<string, number>(
@@ -248,25 +271,108 @@ export default function AnalyticsPage() {
       }))
   }, [filteredSessions])
 
-  const insightsResult = React.useMemo(
+  const aiInsightsRequest = React.useMemo(
     () =>
-      buildAnalyticsInsights({
+      buildAnalyticsInsightsRequest({
+        filteredSessions,
         subjectData,
         totalTopicHours,
         timeDistributionData,
         startHourData,
         period,
-        dateRange: activeRange,
+        activeRange,
+        anchorDate:
+          latestFilteredSessionDate ??
+          activeRange.to ??
+          activeRange.from ??
+          latestSessionDate ??
+          new Date(),
       }),
     [
-      subjectData,
-      totalTopicHours,
-      timeDistributionData,
-      startHourData,
-      period,
       activeRange,
+      filteredSessions,
+      latestFilteredSessionDate,
+      latestSessionDate,
+      period,
+      startHourData,
+      subjectData,
+      timeDistributionData,
+      totalTopicHours,
     ]
   )
+
+  const loadAiInsights = React.useCallback(
+    async (signal?: AbortSignal) => {
+      if (filteredSessions.length === 0) {
+        setAiInsightState({
+          status: "empty",
+          rangeLabel: aiInsightsRequest.rangeLabel,
+          message:
+            "Add study sessions in this range before requesting AI-supported insights.",
+        })
+        return
+      }
+
+      setAiInsightState({
+        status: "loading",
+        rangeLabel: aiInsightsRequest.rangeLabel,
+      })
+
+      try {
+        const response = await fetch("/api/analytics/insights", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(aiInsightsRequest),
+          signal,
+        })
+
+        const parsed = await parseAiJsonResponse(
+          response,
+          analyticsInsightsResponseSchema,
+        )
+
+        if (!parsed.ok) {
+          setAiInsightState({
+            status:
+              parsed.code === "ai_unavailable" ? "unavailable" : "error",
+            rangeLabel: aiInsightsRequest.rangeLabel,
+            message: parsed.message,
+          })
+          return
+        }
+
+        setAiInsightState({
+          status: "success",
+          rangeLabel: aiInsightsRequest.rangeLabel,
+          result: parsed.data,
+        })
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return
+        }
+
+        setAiInsightState({
+          status: "error",
+          rangeLabel: aiInsightsRequest.rangeLabel,
+          message: "The AI insights could not be generated right now.",
+        })
+      }
+    },
+    [aiInsightsRequest, filteredSessions.length]
+  )
+
+  React.useEffect(() => {
+    if (!showAiInsights) {
+      return
+    }
+
+    const controller = new AbortController()
+    void loadAiInsights(controller.signal)
+
+    return () => controller.abort()
+  }, [loadAiInsights, showAiInsights])
 
   const timeDistributionCard = (
     <Card className="min-w-0">
@@ -305,10 +411,10 @@ export default function AnalyticsPage() {
     </Card>
   )
 
-  const subjectMasteryCard = (
+  const subjectDistributionCard = (
     <Card className="min-w-0">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold">Subject Mastery</CardTitle>
+        <CardTitle className="text-base font-semibold">Subject Distribution</CardTitle>
         <CardDescription>Topic-time share in the selected range</CardDescription>
       </CardHeader>
       <CardContent className="px-3 sm:px-6">
@@ -534,13 +640,14 @@ export default function AnalyticsPage() {
           <div className="order-2 min-w-0 xl:order-1 xl:col-start-1">
             <div className="flex min-w-0 flex-col gap-4">
               {timeDistributionCard}
-              {subjectMasteryCard}
+              {subjectDistributionCard}
               {startHourFocusCard}
             </div>
           </div>
           <div className="order-1 min-w-0 xl:order-2 xl:col-start-2">
             <AIInsightPanel
-              insightsResult={insightsResult}
+              state={aiInsightState}
+              onRetry={() => void loadAiInsights()}
               className="xl:h-full"
             />
           </div>
@@ -552,7 +659,7 @@ export default function AnalyticsPage() {
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {timeDistributionCard}
-            {subjectMasteryCard}
+            {subjectDistributionCard}
           </div>
           {startHourFocusCard}
           {studyActivityCalendarCard}

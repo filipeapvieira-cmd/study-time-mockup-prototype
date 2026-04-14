@@ -1,22 +1,17 @@
 "use client"
 
-import type { CSSProperties } from "react"
 import {
-  BarChart3,
-  Clock3,
+  AlertCircle,
   MessageSquareText,
-  Target,
+  RefreshCw,
+  Sparkles,
 } from "lucide-react"
 
-import type {
-  AnalyticsInsightsResult,
-  InsightCategory,
-  InsightSeverity,
-  SubjectAllocationInsightItem,
-} from "@/lib/analytics-insights"
+import type { AnalyticsInsightsResponse } from "@/lib/ai/contracts"
 import { cn } from "@/lib/utils"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Empty,
@@ -25,187 +20,176 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
+const FOCUS_AREA_LABELS = {
+  coverage: "Coverage",
+  consistency: "Consistency",
+  timing: "Timing",
+  revision: "Revision",
+  reflection: "Reflection",
+} as const
+
+export type AnalyticsInsightPanelState =
+  | { status: "idle"; rangeLabel: string }
+  | { status: "loading"; rangeLabel: string }
+  | { status: "empty"; rangeLabel: string; message: string }
+  | { status: "unavailable"; rangeLabel: string; message: string }
+  | { status: "error"; rangeLabel: string; message: string }
+  | {
+      status: "success"
+      rangeLabel: string
+      result: AnalyticsInsightsResponse
+    }
+
 type AIInsightPanelProps = {
-  insightsResult: AnalyticsInsightsResult
+  state: AnalyticsInsightPanelState
   className?: string
+  onRetry?: () => void
 }
 
-function getSeverityBadgeVariant(severity: InsightSeverity): "secondary" | "destructive" {
-  if (severity === "critical") {
-    return "destructive"
-  }
+function renderEmptyState(
+  state: AnalyticsInsightPanelState,
+  onRetry?: () => void,
+) {
+  switch (state.status) {
+    case "idle":
+    case "loading":
+      return (
+        <div className="flex min-h-[280px] flex-col items-center justify-center">
+          <RefreshCw className="size-6 animate-spin text-muted-foreground" />
+          <span className="mt-3 text-sm text-muted-foreground">
+            Generating AI insights...
+          </span>
+        </div>
+      )
 
-  return "secondary"
+    case "empty":
+      return (
+        <Empty className="min-h-[280px]">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Sparkles />
+            </EmptyMedia>
+            <EmptyTitle>No AI insights for this range</EmptyTitle>
+            <EmptyDescription>{state.message}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )
+
+    case "unavailable":
+    case "error":
+      return (
+        <Empty className="min-h-[280px]">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              {state.status === "unavailable" ? (
+                <AlertCircle />
+              ) : (
+                <MessageSquareText />
+              )}
+            </EmptyMedia>
+            <EmptyTitle>
+              {state.status === "unavailable"
+                ? "AI insights unavailable"
+                : "AI insights unavailable right now"}
+            </EmptyTitle>
+            <EmptyDescription>{state.message}</EmptyDescription>
+          </EmptyHeader>
+          {onRetry ? (
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              <RefreshCw className="mr-2 size-3" />
+              Try Again
+            </Button>
+          ) : null}
+        </Empty>
+      )
+
+    case "success":
+      return null
+  }
 }
 
-function getSeverityBadgeStyle(severity: InsightSeverity): CSSProperties | undefined {
-  if (severity === "info") {
-    return {
-      backgroundColor: "var(--chart-2)",
-      borderColor: "transparent",
-      color: "var(--background)",
-    }
-  }
+function renderInsights(result: AnalyticsInsightsResponse) {
+  const accordionDefaultValues = result.insights.map((insight) => insight.id)
 
-  if (severity === "warning") {
-    return {
-      backgroundColor: "var(--chart-1)",
-      borderColor: "transparent",
-      color: "var(--background)",
-    }
-  }
+  return (
+    <ScrollArea className="h-[540px] pr-3 xl:h-full">
+      <div className="flex flex-col gap-4">
+        <Card className="border-dashed py-4">
+          <CardContent className="px-4">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {result.overview}
+            </p>
+          </CardContent>
+        </Card>
 
-  return undefined
+        <Accordion
+          type="multiple"
+          defaultValue={accordionDefaultValues}
+          className="w-full"
+        >
+          {result.insights.map((insight) => (
+            <AccordionItem key={insight.id} value={insight.id}>
+              <AccordionTrigger>
+                <div className="flex w-full items-start gap-3">
+                  <MessageSquareText className="mt-0.5 size-4 text-muted-foreground" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <span className="text-sm font-medium">{insight.title}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {insight.summary}
+                    </span>
+                  </div>
+                  <Badge variant="secondary">
+                    {FOCUS_AREA_LABELS[insight.focusArea]}
+                  </Badge>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="flex flex-col gap-3">
+                <div className="rounded-md border p-3">
+                  <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                    Evidence
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {insight.evidence}
+                  </p>
+                </div>
+                <div className="rounded-md border p-3">
+                  <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                    Next Action
+                  </p>
+                  <p className="mt-1 text-sm">{insight.action}</p>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
+    </ScrollArea>
+  )
 }
 
-function getCategoryIcon(category: InsightCategory) {
-  if (category === "topic-allocation") {
-    return Target
-  }
-
-  if (category === "workload-consistency") {
-    return BarChart3
-  }
-
-  return Clock3
-}
-
-function formatPercent(value: number): string {
-  return Number.isInteger(value) ? `${value}%` : `${value.toFixed(1)}%`
-}
-
-function formatAllocationState(item: SubjectAllocationInsightItem): string {
-  if (item.state === "balanced") {
-    return "On target"
-  }
-
-  if (item.state === "over") {
-    return "Above target"
-  }
-
-  return "Below target"
-}
-
-function formatTargetDifference(item: SubjectAllocationInsightItem): string {
-  if (item.state === "balanced") {
-    return "In target range"
-  }
-
-  const distance = Math.abs(item.delta)
-  const distanceText = Number.isInteger(distance) ? `${distance}%` : `${distance.toFixed(1)}%`
-  return item.state === "over"
-    ? `Above target by ${distanceText}`
-    : `Below target by ${distanceText}`
-}
-
-export function AIInsightPanel({ insightsResult, className }: AIInsightPanelProps) {
-  const accordionDefaultValues = insightsResult.insights.map((insight) => insight.id)
-
+export function AIInsightPanel({
+  state,
+  className,
+  onRetry,
+}: AIInsightPanelProps) {
   return (
     <Card className={cn("h-fit", className)}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base font-semibold">
           <MessageSquareText className="size-4" />
-          AI Insight Panel
+          AI Insights
         </CardTitle>
         <CardDescription>
-          Assistant analysis for {insightsResult.rangeLabel}.
+          Assistant analysis for {state.rangeLabel}.
         </CardDescription>
       </CardHeader>
 
       <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
-        {!insightsResult.hasData ? (
-          <Empty className="min-h-[280px]">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <MessageSquareText />
-              </EmptyMedia>
-              <EmptyTitle>No insights available yet</EmptyTitle>
-              <EmptyDescription>
-                Add study sessions in this date range to generate evidence-based insights.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <ScrollArea className="h-[540px] pr-3 xl:h-full">
-            <Accordion type="multiple" defaultValue={accordionDefaultValues} className="w-full">
-              {insightsResult.insights.map((insight) => {
-                const Icon = getCategoryIcon(insight.category)
-                return (
-                  <AccordionItem key={insight.id} value={insight.id}>
-                    <AccordionTrigger>
-                      <div className="flex w-full items-start gap-3">
-                        <Icon className="mt-0.5 size-4 text-muted-foreground" />
-                        <div className="flex min-w-0 flex-1 flex-col gap-1">
-                          <span className="text-sm font-medium">{insight.title}</span>
-                          <span className="text-xs text-muted-foreground">{insight.summary}</span>
-                        </div>
-                        <Badge
-                          variant={getSeverityBadgeVariant(insight.severity)}
-                          style={getSeverityBadgeStyle(insight.severity)}
-                        >
-                          {insight.severity}
-                        </Badge>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="flex flex-col gap-4">
-                      <p className="text-sm text-muted-foreground">{insight.evidence}</p>
-
-                      {insight.category === "topic-allocation" &&
-                      insightsResult.subjectAllocations.length > 0 &&
-                      insightsResult.expectedShare !== null ? (
-                        <div className="flex flex-col gap-3 rounded-md border p-3">
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Subject share</span>
-                            <span>Target {formatPercent(insightsResult.expectedShare)}</span>
-                          </div>
-                          {insightsResult.subjectAllocations.slice(0, 5).map((allocation) => (
-                            <div key={allocation.name} className="flex flex-col gap-1.5">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="truncate pr-2 font-medium">{allocation.name}</span>
-                                <span>{formatPercent(allocation.share)}</span>
-                              </div>
-                              <Progress
-                                value={Math.max(0, Math.min(100, allocation.share))}
-                                className="h-1.5"
-                              />
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>{formatAllocationState(allocation)}</span>
-                                <span>{formatTargetDifference(allocation)}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-
-                      {insight.suggestions.length > 0 ? (
-                        <div className="flex flex-col gap-2">
-                          <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                            Improvement Suggestions
-                          </h4>
-                          {insight.suggestions.map((suggestion) => (
-                            <div key={suggestion.id} className="rounded-md border p-3">
-                              <p className="text-sm font-medium">{suggestion.title}</p>
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {suggestion.recommendation}
-                              </p>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                Evidence: {suggestion.evidence}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </AccordionContent>
-                  </AccordionItem>
-                )
-              })}
-            </Accordion>
-          </ScrollArea>
-        )}
+        {state.status === "success"
+          ? renderInsights(state.result)
+          : renderEmptyState(state, onRetry)}
       </CardContent>
     </Card>
   )
