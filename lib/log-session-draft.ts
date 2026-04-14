@@ -39,8 +39,8 @@ export interface LogSessionDraftState {
 
 /**
  * Domain events for the log-session draft lifecycle.
- * These events encode business rules such as one topic per subject and
- * synchronized timer behavior between session and topic scopes.
+ * These events encode session draft behavior and synchronized timer updates
+ * between session and topic scopes.
  */
 export type LogSessionDraftAction =
   | { type: "selectTopic"; topicId: string }
@@ -120,20 +120,6 @@ function stopAllTopicTimers(
   return updatedTopics
 }
 
-function hasAvailableSubject(state: LogSessionDraftState): boolean {
-  if (state.subjects.length === 0 || state.topicOrder.length >= state.subjects.length) {
-    return false
-  }
-
-  const usedSubjects = new Set(
-    state.topicOrder
-      .map((topicId) => state.topicsById[topicId]?.subject ?? "")
-      .filter(Boolean),
-  )
-
-  return state.subjects.some((subject) => !usedSubjects.has(subject.value))
-}
-
 function updateActiveTopic(
   state: LogSessionDraftState,
   updater: (topic: LogSessionTopicDraft) => LogSessionTopicDraft,
@@ -195,10 +181,6 @@ export function logSessionDraftReducer(
       }
     }
     case "addTopic": {
-      if (!hasAvailableSubject(state)) {
-        return state
-      }
-
       const nextTopicId = getNextTopicId(state.topicOrder)
       const nextTopic = createTopicDraft(nextTopicId)
 
@@ -237,22 +219,7 @@ export function logSessionDraftReducer(
       return updateActiveTopic(state, (topic) => {
         const nextSubjectValue = action.subjectValue
 
-        if (!nextSubjectValue) {
-          return {
-            ...topic,
-            subject: "",
-          }
-        }
-
-        const subjectInUse = state.topicOrder.some((topicId) => {
-          if (topicId === topic.id) {
-            return false
-          }
-
-          return state.topicsById[topicId]?.subject === nextSubjectValue
-        })
-
-        if (subjectInUse || topic.subject === nextSubjectValue) {
+        if (topic.subject === nextSubjectValue) {
           return topic
         }
 
@@ -478,29 +445,4 @@ export function getActiveTopicViewModel(state: LogSessionDraftState): ActiveTopi
     subjectItem,
     topicLabel,
   }
-}
-
-/**
- * Enforces the one-topic-per-subject business rule for the Subject selector.
- * The active topic keeps its current subject available while other used subjects are filtered out.
- */
-export function getAvailableSubjectsForActiveTopic(state: LogSessionDraftState): TagItem[] {
-  const activeTopic = getActiveTopic(state)
-  const usedByOtherTopics = new Set(
-    state.topicOrder
-      .filter((topicId) => topicId !== activeTopic?.id)
-      .map((topicId) => state.topicsById[topicId]?.subject ?? "")
-      .filter(Boolean),
-  )
-
-  return state.subjects.filter(
-    (subject) => subject.value === activeTopic?.subject || !usedByOtherTopics.has(subject.value),
-  )
-}
-
-/**
- * Determines whether a new topic can be created under current taxonomy and assignments.
- */
-export function canAddTopic(state: LogSessionDraftState): boolean {
-  return hasAvailableSubject(state)
 }

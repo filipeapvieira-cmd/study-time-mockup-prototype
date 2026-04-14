@@ -9,10 +9,7 @@ import { HashtagMultiSelect } from "@/components/session-fields/hashtag-multi-se
 import { SessionReflectionField } from "@/components/session-fields/session-reflection-field"
 import { SubjectSelect } from "@/components/session-fields/subject-select"
 import { Button } from "@/components/ui/button"
-import {
-  getActiveTopicViewModel,
-  getAvailableSubjectsForActiveTopic,
-} from "@/lib/log-session-draft"
+import { getActiveTopicViewModel } from "@/lib/log-session-draft"
 import {
   cloneReflection,
   createReflectionFromText,
@@ -30,10 +27,6 @@ export default function LogSessionPage() {
 
   const { activeTopic, selectedSubject, selectedHashtags, reflection, subjectItem } =
     React.useMemo(() => getActiveTopicViewModel(state), [state])
-  const availableSubjects = React.useMemo(
-    () => getAvailableSubjectsForActiveTopic(state),
-    [state],
-  )
 
   const selectedHashtagItems = React.useMemo(
     () =>
@@ -118,8 +111,7 @@ export default function LogSessionPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <SubjectSelect
-                subjects={availableSubjects}
-                allSubjects={state.subjects}
+                subjects={state.subjects}
                 hashtags={state.hashtags}
                 value={selectedSubject}
                 onChange={actions.updateActiveTopicSubject}

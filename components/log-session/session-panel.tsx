@@ -18,7 +18,6 @@ import {
   SidebarGroupLabel,
 } from "@/components/ui/sidebar"
 import {
-  canAddTopic,
   getActiveTopic,
   getTopicLabel,
 } from "@/lib/log-session-draft"
@@ -34,7 +33,6 @@ export function SessionPanel() {
 
   const activeTopic = getActiveTopic(state)
   const isSessionPlaying = state.sessionStatus === "playing"
-  const canCreateTopic = canAddTopic(state)
 
   const formatTime = useCallback((seconds: number) => {
     const hrs = Math.floor(seconds / 3600)
@@ -215,9 +213,8 @@ export function SessionPanel() {
               size="icon"
               className="shrink-0 rounded-md border-input bg-background text-foreground shadow-xs hover:bg-accent"
               onClick={actions.addTopic}
-              disabled={!canCreateTopic}
-              title={canCreateTopic ? "Add new topic" : "All subjects are already used"}
-              aria-label={canCreateTopic ? "Add new topic" : "Cannot add more topics"}
+              title="Add new topic"
+              aria-label="Add new topic"
             >
               <Plus className="size-4" />
             </Button>

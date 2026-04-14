@@ -152,38 +152,13 @@ export function SessionEditorSheet({
   const effectiveTime = calculateEffectiveTime(startTime, endTime, pauseTimeSeconds)
   const topicDurationSeconds = partsToDuration(editTopicDuration)
 
-  const availableSubjects = React.useMemo(() => {
-    const usedSubjects = new Set(
-      topics
-        .filter((topic) => topic.id !== selectedTopicId)
-        .map((topic) => topic.subject),
-    )
-
-    return subjects.filter(
-      (subject) => subject.value === selectedSubject || !usedSubjects.has(subject.value),
-    )
-  }, [selectedSubject, selectedTopicId, subjects, topics])
-
-  const canAddTopic = React.useMemo(
-    () => subjects.some((subject) => !topics.some((topic) => topic.subject === subject.value)),
-    [subjects, topics],
-  )
-
   const topicValidationMessage = React.useMemo(() => {
     if (!selectedSubject) {
       return "Choose a subject for this topic."
     }
 
-    const duplicateSubject = topics.some(
-      (topic) => topic.id !== selectedTopicId && topic.subject === selectedSubject,
-    )
-
-    if (duplicateSubject) {
-      return "This subject is already used in this session."
-    }
-
     return null
-  }, [selectedSubject, selectedTopicId, topics])
+  }, [selectedSubject])
 
   React.useEffect(() => {
     if (!open || !session) return
@@ -280,21 +255,19 @@ export function SessionEditorSheet({
   }
 
   const startAddTopic = () => {
-    if (!canAddTopic) return
-
     const nextTopics = commitSelectedTopic(topics)
-    const nextSubject = subjects.find(
-      (subject) => !nextTopics.some((topic) => topic.subject === subject.value),
-    )
-
-    if (!nextSubject) return
+    const fallbackSubjectValue = subjects[0]?.value ?? ""
+    const preferredSubjectValue = subjects.some((subject) => subject.value === selectedSubject)
+      ? selectedSubject
+      : fallbackSubjectValue
+    const preferredSubject = getTagItemByValue(subjects, preferredSubjectValue)
 
     const draftTopic: SessionTopic = {
       id: crypto.randomUUID(),
       duration: 0,
-      subject: nextSubject.value,
-      subjectLabel: nextSubject.label,
-      subjectColor: nextSubject.color,
+      subject: preferredSubjectValue,
+      subjectLabel: preferredSubject?.label ?? "",
+      subjectColor: preferredSubject?.color ?? "",
       hashtags: [],
       reflection: createEmptyReflection(),
     }
@@ -428,8 +401,7 @@ export function SessionEditorSheet({
                     <FieldTitle>Subject</FieldTitle>
                     <FieldContent>
                       <SubjectSelect
-                        subjects={availableSubjects}
-                        allSubjects={subjects}
+                        subjects={subjects}
                         hashtags={hashtags}
                         value={selectedSubject}
                         onChange={setSelectedSubject}
@@ -715,7 +687,6 @@ export function SessionEditorSheet({
                               variant="outline"
                               className="size-9"
                               onClick={startAddTopic}
-                              disabled={!canAddTopic}
                               aria-label="Add topic"
                             >
                               <Plus className="size-4" />
