@@ -36,7 +36,6 @@ const ROUTES = [
   { id: "analytics", path: "/analytics" },
   { id: "log-session", path: "/log-session" },
   { id: "session-history", path: "/session-history" },
-  { id: "editor", path: "/editor" },
 ];
 
 const OUTPUT_DIR = path.join(process.cwd(), "artifacts", "a11y", "raw", "lighthouse");

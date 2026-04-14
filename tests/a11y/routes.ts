@@ -4,7 +4,6 @@ export const AUDIT_ROUTES = [
   { id: "analytics", path: "/analytics" },
   { id: "log-session", path: "/log-session" },
   { id: "session-history", path: "/session-history" },
-  { id: "editor", path: "/editor" },
 ] as const;
 
 export const AUDIT_THEMES = ["light", "dark"] as const;
