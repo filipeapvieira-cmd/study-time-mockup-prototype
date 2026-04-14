@@ -19,6 +19,7 @@
     "a11y:audit:headed": "pnpm run a11y:lint && pnpm run a11y:axe:headed && pnpm run a11y:lighthouse && pnpm run a11y:report"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.52",
     "@hookform/resolvers": "^3.9.1",
     "@platejs/basic-nodes": "^52.3.10",
     "@radix-ui/react-accordion": "1.2.12",
@@ -51,6 +52,7 @@
     "@radix-ui/react-tooltip": "1.2.8",
     "@tanstack/react-table": "^8.21.3",
     "@vercel/analytics": "1.6.1",
+    "ai": "^6.0.159",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
