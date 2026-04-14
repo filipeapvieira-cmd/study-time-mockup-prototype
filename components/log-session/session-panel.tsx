@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
-import { Pause, Play, RotateCcw, Square, Save, Trash2, Plus, Pencil, Check, X } from "lucide-react"
+import { useCallback, useMemo } from "react"
+import { Pause, Play, RotateCcw, Square, Save, Trash2, Plus } from "lucide-react"
+
+import { useLogSessionDraft } from "@/components/log-session/log-session-draft-provider"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -16,67 +17,24 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
 } from "@/components/ui/sidebar"
+import {
+  canAddTopic,
+  getActiveTopic,
+  getTopicLabel,
+} from "@/lib/log-session-draft"
 import { SESSION_TIMER_LABEL, TOPIC_LABEL } from "@/lib/session-labels"
 
-interface Topic {
+type TopicItem = {
   id: string
-  title: string
-  time: number
-  isActive: boolean
-  isRunning: boolean
+  label: string
 }
 
-type SessionStatus = "stopped" | "playing" | "paused"
-
 export function SessionPanel() {
-  const [sessionStatus, setSessionStatus] = useState<SessionStatus>("stopped")
-  const [time, setTime] = useState(0)
-  const [topics, setTopics] = useState<Topic[]>([
-    { id: "1", title: "Untitled", time: 0, isActive: true, isRunning: false },
-  ])
-  const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
-  const [editingTitle, setEditingTitle] = useState("")
-  const editTopicInputRef = useRef<HTMLInputElement>(null)
+  const { state, actions } = useLogSessionDraft()
 
-  const activeTopic = topics.find((t) => t.isActive)
-  const isSessionPlaying = sessionStatus === "playing"
-
-  /**
-   * What it does: starts or stops a 1-second interval that updates session and active topic timers.
-   * Why needed: timer state must stay synchronized with play/pause status and clean up intervals on state changes or unmount.
-   */
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null
-
-    if (isSessionPlaying) {
-      interval = setInterval(() => {
-        setTime((t) => t + 1)
-        setTopics((prev) =>
-          prev.map((topic) =>
-            topic.isRunning ? { ...topic, time: topic.time + 1 } : topic
-          )
-        )
-      }, 1000)
-    }
-
-    return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [isSessionPlaying])
-
-  /**
-   * What it does: focuses the topic title input after edit mode renders.
-   * Why needed: autoFocus was removed; without this, keyboard users must tab manually after pressing Edit.
-   */
-  useEffect(() => {
-    if (!editingTopicId) return
-
-    const frame = window.requestAnimationFrame(() => {
-      editTopicInputRef.current?.focus()
-    })
-
-    return () => window.cancelAnimationFrame(frame)
-  }, [editingTopicId])
+  const activeTopic = getActiveTopic(state)
+  const isSessionPlaying = state.sessionStatus === "playing"
+  const canCreateTopic = canAddTopic(state)
 
   const formatTime = useCallback((seconds: number) => {
     const hrs = Math.floor(seconds / 3600)
@@ -87,132 +45,79 @@ export function SessionPanel() {
       .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
   }, [])
 
-  const stopAllTopicTimers = useCallback(() => {
-    setTopics((prev) =>
-      prev.map((topic) =>
-        topic.isRunning ? { ...topic, isRunning: false } : topic
-      )
-    )
-  }, [])
+  const topicItems = useMemo<TopicItem[]>(
+    () =>
+      state.topicOrder
+        .map((topicId, index) => {
+          const topic = state.topicsById[topicId]
+          if (!topic) {
+            return null
+          }
 
-  const handleSessionPrimaryAction = () => {
-    if (sessionStatus === "playing") {
-      setSessionStatus("paused")
-      stopAllTopicTimers()
-      return
+          return {
+            id: topicId,
+            label: getTopicLabel(topic, { subjects: state.subjects }, index + 1),
+          }
+        })
+        .filter((topic): topic is TopicItem => Boolean(topic)),
+    [state.subjects, state.topicOrder, state.topicsById],
+  )
+
+  const activeTopicLabel = useMemo(() => {
+    if (!activeTopic) {
+      return "Topic 1"
     }
 
-    setSessionStatus("playing")
+    const activeIndex = state.topicOrder.indexOf(activeTopic.id)
+    return getTopicLabel(
+      activeTopic,
+      { subjects: state.subjects },
+      activeIndex >= 0 ? activeIndex + 1 : 1,
+    )
+  }, [activeTopic, state.subjects, state.topicOrder])
+
+  const handleSessionPrimaryAction = () => {
+    actions.toggleSession()
   }
 
   const resetTimer = () => {
-    setSessionStatus("stopped")
-    setTime(0)
-    setTopics((prev) =>
-      prev.map((topic) => ({ ...topic, time: 0, isRunning: false }))
-    )
+    actions.resetSession()
   }
 
   const stopSession = () => {
-    setSessionStatus("stopped")
-    stopAllTopicTimers()
+    actions.stopSession()
   }
 
   const saveSession = () => {
-    setSessionStatus("stopped")
-    stopAllTopicTimers()
+    actions.stopSession()
   }
 
-  const toggleTopicTimer = (topicId: string) => {
-    if (sessionStatus !== "playing") return
-
-    setTopics((prev) =>
-      prev.map((topic) =>
-        topic.id === topicId
-          ? { ...topic, isRunning: !topic.isRunning }
-          : topic
-      )
-    )
-  }
-
-  const addTopic = () => {
-    const newTopic: Topic = {
-      id: Date.now().toString(),
-      title: `${TOPIC_LABEL} ${topics.length + 1}`,
-      time: 0,
-      isActive: false,
-      isRunning: false,
-    }
-    setTopics((prev) => [...prev, newTopic])
-  }
-
-  const deleteTopic = (id: string) => {
-    if (topics.length === 1) return
-    const topicToDelete = topics.find((t) => t.id === id)
-    const newTopics = topics.filter((t) => t.id !== id)
-
-    if (topicToDelete?.isActive && newTopics.length > 0) {
-      newTopics[0].isActive = true
-    }
-    setTopics(newTopics)
-  }
-
-  const setActiveTopic = (id: string) => {
-    setTopics((prev) =>
-      prev.map((topic) => ({
-        ...topic,
-        isActive: topic.id === id,
-      }))
-    )
-  }
-
-  const startEditingTopic = (topic: Topic) => {
-    setEditingTopicId(topic.id)
-    setEditingTitle(topic.title)
-  }
-
-  const saveTopicTitle = () => {
-    if (editingTopicId && editingTitle.trim()) {
-      setTopics((prev) =>
-        prev.map((t) =>
-          t.id === editingTopicId ? { ...t, title: editingTitle.trim() } : t
-        )
-      )
-    }
-    setEditingTopicId(null)
-    setEditingTitle("")
-  }
-
-  const cancelEditingTopic = () => {
-    setEditingTopicId(null)
-    setEditingTitle("")
+  if (!activeTopic) {
+    return null
   }
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Session Timer Group */}
       <SidebarGroup className="px-3 py-2">
         <SidebarGroupLabel className="mb-3 px-0 text-[10px] font-semibold uppercase tracking-widest text-foreground group-data-[collapsible=icon]:hidden">
           {SESSION_TIMER_LABEL}
         </SidebarGroupLabel>
         <SidebarGroupContent className="space-y-4">
-          {/* Timer Display Card */}
           <div className="rounded-lg bg-muted/40 p-4">
             <div className="text-center">
               <div className="font-mono text-2xl font-bold tracking-tight tabular-nums dark:font-medium">
-                {formatTime(time)}
+                {formatTime(state.sessionElapsedSeconds)}
               </div>
               <p className="mt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {sessionStatus === "playing"
+                {state.sessionStatus === "playing"
                   ? "Recording"
-                  : sessionStatus === "paused"
+                  : state.sessionStatus === "paused"
                     ? "Paused"
                     : "Ready"}
               </p>
             </div>
           </div>
 
-          {/* Session Control Buttons */}
           <div className="flex items-center justify-center gap-2">
             <Button
               onClick={handleSessionPrimaryAction}
@@ -222,14 +127,14 @@ export function SessionPanel() {
               title={
                 isSessionPlaying
                   ? "Pause session"
-                  : sessionStatus === "paused"
+                  : state.sessionStatus === "paused"
                     ? "Resume session"
                     : "Start session"
               }
               aria-label={
                 isSessionPlaying
                   ? "Pause session"
-                  : sessionStatus === "paused"
+                  : state.sessionStatus === "paused"
                     ? "Resume session"
                     : "Start session"
               }
@@ -243,7 +148,7 @@ export function SessionPanel() {
               <span className="sr-only">
                 {isSessionPlaying
                   ? "Pause session"
-                  : sessionStatus === "paused"
+                  : state.sessionStatus === "paused"
                     ? "Resume session"
                     : "Start session"}
               </span>
@@ -282,21 +187,15 @@ export function SessionPanel() {
         </SidebarGroupContent>
       </SidebarGroup>
 
-      {/* Divider */}
       <div className="mx-3 border-t border-border/50" />
 
-      {/* Topic Group */}
       <SidebarGroup className="flex-1 px-3 py-2">
         <SidebarGroupLabel className="mb-3 px-0 text-[10px] font-semibold uppercase tracking-widest text-foreground group-data-[collapsible=icon]:hidden">
           {TOPIC_LABEL}
         </SidebarGroupLabel>
         <SidebarGroupContent className="space-y-3">
-          {/* Topic Selector Row */}
           <div className="flex min-w-0 items-center gap-2">
-            <Select
-              value={activeTopic?.id}
-              onValueChange={(value) => setActiveTopic(value)}
-            >
+            <Select value={activeTopic.id} onValueChange={actions.selectTopic}>
               <SelectTrigger
                 className="min-w-0 flex-1 rounded-md border-input bg-background text-foreground shadow-xs"
                 aria-label={`Select ${TOPIC_LABEL.toLowerCase()}`}
@@ -304,9 +203,9 @@ export function SessionPanel() {
                 <SelectValue placeholder={`Select ${TOPIC_LABEL.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
-                {topics.map((topic) => (
+                {topicItems.map((topic) => (
                   <SelectItem key={topic.id} value={topic.id}>
-                    {topic.title}
+                    {topic.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -315,106 +214,58 @@ export function SessionPanel() {
               variant="outline"
               size="icon"
               className="shrink-0 rounded-md border-input bg-background text-foreground shadow-xs hover:bg-accent"
-              onClick={addTopic}
-              title="Add new topic"
-              aria-label="Add new topic"
+              onClick={actions.addTopic}
+              disabled={!canCreateTopic}
+              title={canCreateTopic ? "Add new topic" : "All subjects are already used"}
+              aria-label={canCreateTopic ? "Add new topic" : "Cannot add more topics"}
             >
               <Plus className="size-4" />
             </Button>
           </div>
 
-          {/* Selected Topic Card */}
-          {activeTopic && (
-            <div className="overflow-hidden rounded-lg border border-border bg-card shadow-xs">
-              <div className="p-3">
-                {editingTopicId === activeTopic.id ? (
-                  /* Editing Mode */
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      ref={editTopicInputRef}
-                      value={editingTitle}
-                      onChange={(e) => setEditingTitle(e.target.value)}
-                      className="h-8 flex-1 rounded-md border-input bg-background text-sm text-foreground shadow-xs"
-                      aria-label="Edit topic title"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") saveTopicTitle()
-                        if (e.key === "Escape") cancelEditingTopic()
-                      }}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={saveTopicTitle}
-                      className="size-7 shrink-0 rounded-md text-foreground hover:bg-accent"
-                      aria-label="Save topic title"
-                    >
-                      <Check className="size-4 text-primary" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={cancelEditingTopic}
-                      className="size-7 shrink-0 rounded-md text-foreground hover:bg-accent"
-                      aria-label="Cancel editing topic title"
-                    >
-                      <X className="size-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  /* View Mode - Title Row */
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-semibold text-foreground">
-                      {activeTopic.title}
-                    </span>
-                    <div className="flex shrink-0 items-center gap-0.5">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => startEditingTopic(activeTopic)}
-                        className="size-7 rounded-md text-foreground hover:bg-accent hover:text-foreground"
-                        aria-label="Edit topic"
-                      >
-                        <Pencil className="size-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteTopic(activeTopic.id)}
-                        disabled={topics.length === 1}
-                        className="size-7 rounded-md text-foreground hover:bg-accent hover:text-destructive disabled:opacity-40"
-                        aria-label="Delete topic"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Topic Timer Display */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => toggleTopicTimer(activeTopic.id)}
-                  disabled={!isSessionPlaying}
-                  className="mt-3 h-auto w-full justify-between rounded-md border-input bg-muted px-3 py-2 text-foreground shadow-none hover:bg-background hover:text-foreground disabled:bg-muted disabled:text-foreground disabled:opacity-60"
-                  title={activeTopic.isRunning ? "Pause topic timer" : "Start topic timer"}
-                  aria-label={activeTopic.isRunning ? "Pause topic timer" : "Start topic timer"}
-                  aria-pressed={activeTopic.isRunning}
-                >
-                  <span className="flex items-center">
-                    {activeTopic.isRunning ? (
-                      <Pause className="size-4" />
-                    ) : (
-                      <Play className="size-4" />
-                    )}
-                  </span>
-                  <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
-                    {formatTime(activeTopic.time)}
-                  </span>
-                </Button>
+          <div className="overflow-hidden rounded-lg border border-border bg-card shadow-xs">
+            <div className="p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate text-sm font-semibold text-foreground">
+                  {activeTopicLabel}
+                </span>
+                <div className="flex shrink-0 items-center gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => actions.deleteTopic(activeTopic.id)}
+                    disabled={state.topicOrder.length === 1}
+                    className="size-7 rounded-md text-foreground hover:bg-accent hover:text-destructive disabled:opacity-40"
+                    aria-label="Delete topic"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
               </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => actions.toggleTopicTimer(activeTopic.id)}
+                disabled={!isSessionPlaying}
+                className="mt-3 h-auto w-full justify-between rounded-md border-input bg-muted px-3 py-2 text-foreground shadow-none hover:bg-background hover:text-foreground disabled:bg-muted disabled:text-foreground disabled:opacity-60"
+                title={activeTopic.isRunning ? "Pause topic timer" : "Start topic timer"}
+                aria-label={activeTopic.isRunning ? "Pause topic timer" : "Start topic timer"}
+                aria-pressed={activeTopic.isRunning}
+              >
+                <span className="flex items-center">
+                  {activeTopic.isRunning ? (
+                    <Pause className="size-4" />
+                  ) : (
+                    <Play className="size-4" />
+                  )}
+                </span>
+                <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                  {formatTime(activeTopic.durationSeconds)}
+                </span>
+              </Button>
             </div>
-          )}
+          </div>
         </SidebarGroupContent>
       </SidebarGroup>
     </div>

@@ -429,6 +429,7 @@ export function SessionEditorSheet({
                     <FieldContent>
                       <SubjectSelect
                         subjects={availableSubjects}
+                        allSubjects={subjects}
                         hashtags={hashtags}
                         value={selectedSubject}
                         onChange={setSelectedSubject}

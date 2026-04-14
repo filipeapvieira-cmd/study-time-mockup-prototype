@@ -24,6 +24,7 @@ import type { TagItem } from "@/types/tag"
 
 interface SubjectSelectProps {
   subjects: TagItem[]
+  allSubjects?: TagItem[]
   hashtags: TagItem[]
   value: string
   onChange: (value: string) => void
@@ -35,6 +36,7 @@ interface SubjectSelectProps {
 
 export function SubjectSelect({
   subjects,
+  allSubjects,
   hashtags,
   value,
   onChange,
@@ -45,6 +47,7 @@ export function SubjectSelect({
 }: SubjectSelectProps) {
   const [open, setOpen] = React.useState(false)
   const selectedSubject = getTagItemByValue(subjects, value)
+  const managedSubjects = allSubjects ?? subjects
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -84,7 +87,7 @@ export function SubjectSelect({
             <CommandInput placeholder="Search subject..." className="flex-1" />
             <div className="flex h-9 items-center border-b pr-1">
               <TagManager
-                subjects={subjects}
+                subjects={managedSubjects}
                 hashtags={hashtags}
                 onSubjectsChange={onSubjectsChange}
                 onHashtagsChange={onHashtagsChange}
