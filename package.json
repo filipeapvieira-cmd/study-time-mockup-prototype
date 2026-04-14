@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "a11y:prepare": "playwright install chromium",
     "a11y:lint": "node -e \"require('fs').mkdirSync('artifacts/a11y/raw',{recursive:true})\" && eslint . --format json --output-file artifacts/a11y/raw/eslint-a11y.json || node -e \"process.exit(0)\"",
     "a11y:axe": "playwright test --config=playwright.a11y.config.ts",

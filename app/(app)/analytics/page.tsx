@@ -331,7 +331,6 @@ export default function AnalyticsPage() {
                       key={`cell-${index}`}
                       fill={entry.fill}
                       aria-label={`${entry.name}: ${entry.value}% of total topic time`}
-                      title={`${entry.name}: ${entry.value}%`}
                     />
                   ))}
                 </Pie>

@@ -53,8 +53,9 @@ const WEEKDAY_SHORT = ["M", "T", "W", "T", "F", "S", "S"] as const
 
 const calendarLocalizer = dateFnsLocalizer({
   format,
-  parse: (value, formatString) => parse(value, formatString, new Date()),
-  startOfWeek: (date) => startOfWeek(date, { weekStartsOn: WEEK_STARTS_ON }),
+  parse: (value: string, formatString: string) =>
+    parse(value, formatString, new Date()),
+  startOfWeek: (date: Date) => startOfWeek(date, { weekStartsOn: WEEK_STARTS_ON }),
   getDay,
   locales: {
     "en-US": enUS,
