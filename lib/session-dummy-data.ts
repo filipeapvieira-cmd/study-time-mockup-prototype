@@ -814,3 +814,63 @@ export const TEMP_STUDY_SESSIONS: StudySession[] = [
   ...BASE_SAMPLE_SESSIONS.map(createSampleSession),
   ...GENERATED_SAMPLE_SESSIONS.map(createSampleSession),
 ]
+
+export type DashboardMetricsSnapshot = {
+  totalHoursLogged: number
+  averageSessionLength: number
+  currentStreakDays: number
+}
+
+function shiftDateKeyByDays(dateKey: string, dayOffset: number): string {
+  const date = new Date(`${dateKey}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() - dayOffset)
+  return date.toISOString().slice(0, 10)
+}
+
+function calculateCurrentStreakDays(dateKeys: string[]): number {
+  if (dateKeys.length === 0) {
+    return 0
+  }
+
+  const uniqueDateKeys = Array.from(new Set(dateKeys)).sort((left, right) =>
+    left.localeCompare(right)
+  )
+  const latestDateKey = uniqueDateKeys[uniqueDateKeys.length - 1]
+  const availableDateKeys = new Set(uniqueDateKeys)
+
+  let streakDays = 0
+  while (availableDateKeys.has(shiftDateKeyByDays(latestDateKey, streakDays))) {
+    streakDays += 1
+  }
+
+  return streakDays
+}
+
+function buildDashboardMetricsSnapshot(
+  sessions: StudySession[]
+): DashboardMetricsSnapshot {
+  if (sessions.length === 0) {
+    return {
+      totalHoursLogged: 0,
+      averageSessionLength: 0,
+      currentStreakDays: 0,
+    }
+  }
+
+  const totalEffectiveTime = sessions.reduce(
+    (total, session) => total + session.effectiveTime,
+    0
+  )
+
+  return {
+    totalHoursLogged: totalEffectiveTime,
+    averageSessionLength: Math.round(totalEffectiveTime / sessions.length),
+    currentStreakDays: calculateCurrentStreakDays(
+      sessions.map((session) => session.date)
+    ),
+  }
+}
+
+export const DASHBOARD_METRICS_SNAPSHOT = buildDashboardMetricsSnapshot(
+  TEMP_STUDY_SESSIONS
+)

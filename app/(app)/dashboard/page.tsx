@@ -1,6 +1,5 @@
 import { CtaCard } from "@/components/dashboard/cta-card"
 import { StatsCards } from "@/components/dashboard/stats-cards"
-import { QuotesCard } from "@/components/dashboard/quotes-card"
 import { RecentSessionsCard } from "@/components/dashboard/recent-sessions-card"
 
 export default function DashboardPage() {
@@ -17,10 +16,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <RecentSessionsCard />
-        <div className="grid gap-6 lg:grid-rows-3">
-          <QuotesCard />
-          <StatsCards className="gap-6 lg:row-span-2 lg:grid-rows-2" />
-        </div>
+        <StatsCards className="gap-6 lg:grid-cols-1 lg:grid-rows-3" />
       </div>
     </div>
   )
