@@ -257,17 +257,79 @@ export function logSessionDraftReducer(
       }))
     }
     case "updateSubjects": {
-      const nextSubjects = cloneTagItems(action.subjects)
-      const validSubjectValues = new Set(nextSubjects.map((subject) => subject.value))
-      const nextTopicsById: Record<string, LogSessionTopicDraft> = {}
+      const proposedSubjects = cloneTagItems(action.subjects)
+      const previousSubjectsById = new Map(state.subjects.map((subject) => [subject.id, subject]))
+      const renamedSubjectValues = new Map<string, string>()
+
+      for (const proposedSubject of proposedSubjects) {
+        const previousSubject = previousSubjectsById.get(proposedSubject.id)
+        if (!previousSubject || previousSubject.value === proposedSubject.value) {
+          continue
+        }
+
+        renamedSubjectValues.set(previousSubject.value, proposedSubject.value)
+      }
+
+      const topicsAfterRename: Record<string, LogSessionTopicDraft> = {}
 
       for (const topicId of state.topicOrder) {
         const topic = state.topicsById[topicId]
-        if (!topic) continue
+        if (!topic) {
+          continue
+        }
 
-        nextTopicsById[topicId] = validSubjectValues.has(topic.subject)
-          ? topic
-          : { ...topic, subject: "" }
+        const migratedSubjectValue = renamedSubjectValues.get(topic.subject) ?? topic.subject
+        topicsAfterRename[topicId] =
+          migratedSubjectValue === topic.subject
+            ? topic
+            : {
+                ...topic,
+                subject: migratedSubjectValue,
+              }
+      }
+
+      const inUseSubjectValues = new Set<string>()
+      for (const topicId of state.topicOrder) {
+        const topic = topicsAfterRename[topicId]
+        if (!topic?.subject) {
+          continue
+        }
+
+        inUseSubjectValues.add(topic.subject)
+      }
+
+      const nextSubjects = [...proposedSubjects]
+      const nextSubjectValues = new Set(nextSubjects.map((subject) => subject.value))
+
+      for (const inUseSubjectValue of inUseSubjectValues) {
+        if (nextSubjectValues.has(inUseSubjectValue)) {
+          continue
+        }
+
+        const previousSubject = state.subjects.find((subject) => subject.value === inUseSubjectValue)
+        if (!previousSubject) {
+          continue
+        }
+
+        nextSubjects.push({ ...previousSubject })
+        nextSubjectValues.add(previousSubject.value)
+      }
+
+      const nextTopicsById: Record<string, LogSessionTopicDraft> = {}
+
+      for (const topicId of state.topicOrder) {
+        const topic = topicsAfterRename[topicId]
+        if (!topic) {
+          continue
+        }
+
+        nextTopicsById[topicId] =
+          topic.subject && !nextSubjectValues.has(topic.subject)
+            ? {
+                ...topic,
+                subject: "",
+              }
+            : topic
       }
 
       return {
@@ -278,6 +340,18 @@ export function logSessionDraftReducer(
     }
     case "updateHashtags": {
       const nextHashtags = cloneTagItems(action.hashtags)
+      const previousHashtagsById = new Map(state.hashtags.map((hashtag) => [hashtag.id, hashtag]))
+      const renamedHashtagValues = new Map<string, string>()
+
+      for (const nextHashtag of nextHashtags) {
+        const previousHashtag = previousHashtagsById.get(nextHashtag.id)
+        if (!previousHashtag || previousHashtag.value === nextHashtag.value) {
+          continue
+        }
+
+        renamedHashtagValues.set(previousHashtag.value, nextHashtag.value)
+      }
+
       const validHashtagValues = new Set(nextHashtags.map((hashtag) => hashtag.value))
       const nextTopicsById: Record<string, LogSessionTopicDraft> = {}
 
@@ -285,9 +359,23 @@ export function logSessionDraftReducer(
         const topic = state.topicsById[topicId]
         if (!topic) continue
 
+        const migratedHashtags: string[] = []
+        const seenHashtags = new Set<string>()
+
+        for (const hashtagValue of topic.hashtags) {
+          const migratedHashtagValue = renamedHashtagValues.get(hashtagValue) ?? hashtagValue
+
+          if (!validHashtagValues.has(migratedHashtagValue) || seenHashtags.has(migratedHashtagValue)) {
+            continue
+          }
+
+          seenHashtags.add(migratedHashtagValue)
+          migratedHashtags.push(migratedHashtagValue)
+        }
+
         nextTopicsById[topicId] = {
           ...topic,
-          hashtags: topic.hashtags.filter((hashtagValue) => validHashtagValues.has(hashtagValue)),
+          hashtags: migratedHashtags,
         }
       }
 

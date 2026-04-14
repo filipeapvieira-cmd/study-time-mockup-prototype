@@ -146,6 +146,19 @@ export function SessionEditorSheet({
     () => topics.find((topic) => topic.id === selectedTopicId) ?? null,
     [selectedTopicId, topics],
   )
+  const subjectUsageByValue = React.useMemo(() => {
+    const nextUsageByValue: Record<string, number> = {}
+
+    for (const topic of topics) {
+      if (!topic.subject) {
+        continue
+      }
+
+      nextUsageByValue[topic.subject] = (nextUsageByValue[topic.subject] ?? 0) + 1
+    }
+
+    return nextUsageByValue
+  }, [topics])
 
   const isTopicEditable = isEditingTopic || isAddingTopic
   const pauseTimeSeconds = pauseMinutes * 60 + pauseSeconds
@@ -403,6 +416,7 @@ export function SessionEditorSheet({
                       <SubjectSelect
                         subjects={subjects}
                         hashtags={hashtags}
+                        subjectUsageByValue={subjectUsageByValue}
                         value={selectedSubject}
                         onChange={setSelectedSubject}
                         onSubjectsChange={setSubjects}
@@ -417,6 +431,7 @@ export function SessionEditorSheet({
                       <HashtagMultiSelect
                         subjects={subjects}
                         hashtags={hashtags}
+                        subjectUsageByValue={subjectUsageByValue}
                         value={selectedHashtags}
                         onChange={setSelectedHashtags}
                         onSubjectsChange={setSubjects}

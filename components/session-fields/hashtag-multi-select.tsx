@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Check, ChevronDown, Hash, X } from "lucide-react"
 
-import { TagManager } from "@/components/log-session/tag-manager"
+import { SubjectTagManager } from "@/components/log-session/subject-tag-manager"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -31,6 +31,7 @@ import type { TagItem } from "@/types/tag"
 interface HashtagMultiSelectProps {
   subjects: TagItem[]
   hashtags: TagItem[]
+  subjectUsageByValue?: Record<string, number>
   value: string[]
   onChange: (value: string[]) => void
   onSubjectsChange: (subjects: TagItem[]) => void
@@ -41,6 +42,7 @@ interface HashtagMultiSelectProps {
 export function HashtagMultiSelect({
   subjects,
   hashtags,
+  subjectUsageByValue,
   value,
   onChange,
   onSubjectsChange,
@@ -106,9 +108,10 @@ export function HashtagMultiSelect({
         <div className="flex items-center">
           <CommandInput placeholder="Search tags..." className="flex-1" />
           <div className="flex h-9 items-center border-b pr-1">
-            <TagManager
+            <SubjectTagManager
               subjects={subjects}
               hashtags={hashtags}
+              subjectUsageByValue={subjectUsageByValue}
               onSubjectsChange={onSubjectsChange}
               onHashtagsChange={onHashtagsChange}
               initialTab="hashtags"

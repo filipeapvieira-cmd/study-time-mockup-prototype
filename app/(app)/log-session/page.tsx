@@ -38,6 +38,21 @@ export default function LogSessionPage() {
     [selectedHashtags, state.hashtags],
   )
 
+  const subjectUsageByValue = React.useMemo(() => {
+    const nextUsageByValue: Record<string, number> = {}
+
+    for (const topicId of state.topicOrder) {
+      const topic = state.topicsById[topicId]
+      if (!topic?.subject) {
+        continue
+      }
+
+      nextUsageByValue[topic.subject] = (nextUsageByValue[topic.subject] ?? 0) + 1
+    }
+
+    return nextUsageByValue
+  }, [state.topicOrder, state.topicsById])
+
   const reflectionText = React.useMemo(
     () => reflectionToPlainText(reflection),
     [reflection],
@@ -113,6 +128,7 @@ export default function LogSessionPage() {
               <SubjectSelect
                 subjects={state.subjects}
                 hashtags={state.hashtags}
+                subjectUsageByValue={subjectUsageByValue}
                 value={selectedSubject}
                 onChange={actions.updateActiveTopicSubject}
                 onSubjectsChange={actions.updateSubjects}
@@ -124,6 +140,7 @@ export default function LogSessionPage() {
               <HashtagMultiSelect
                 subjects={state.subjects}
                 hashtags={state.hashtags}
+                subjectUsageByValue={subjectUsageByValue}
                 value={selectedHashtags}
                 onChange={actions.updateActiveTopicHashtags}
                 onSubjectsChange={actions.updateSubjects}

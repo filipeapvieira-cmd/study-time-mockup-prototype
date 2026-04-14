@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { LogSessionDraftProvider } from "@/components/log-session/log-session-draft-provider"
 import { AppThemeBoundary } from "@/components/app-theme-boundary"
+import { Toaster } from "@/components/ui/sonner"
 import {
   SidebarInset,
   SidebarProvider,
@@ -29,6 +30,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </SidebarInset>
           </LogSessionDraftProvider>
         </SidebarProvider>
+        <Toaster />
       </div>
     </AppThemeBoundary>
   )

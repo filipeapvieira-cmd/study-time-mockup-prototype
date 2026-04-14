@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Plus, Pencil, Trash2, Check, X, Settings, Search } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -286,21 +287,23 @@ function TagList({ items, onAdd, onUpdate, onDelete, itemType }: TagListProps) {
   )
 }
 
-interface TagManagerProps {
+interface SubjectTagManagerProps {
   subjects: TagItem[]
   hashtags: TagItem[]
+  subjectUsageByValue?: Record<string, number>
   onSubjectsChange: (subjects: TagItem[]) => void
   onHashtagsChange: (hashtags: TagItem[]) => void
   initialTab?: "subjects" | "hashtags"
 }
 
-export function TagManager({
+export function SubjectTagManager({
   subjects,
   hashtags,
+  subjectUsageByValue,
   onSubjectsChange,
   onHashtagsChange,
   initialTab = "subjects",
-}: TagManagerProps) {
+}: SubjectTagManagerProps) {
   const [open, setOpen] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState<"subjects" | "hashtags">(
     initialTab
@@ -315,6 +318,19 @@ export function TagManager({
   }
 
   const deleteSubject = (id: string) => {
+    const subjectToDelete = subjects.find((subject) => subject.id === id)
+    if (!subjectToDelete) {
+      return
+    }
+
+    const usageCount = subjectUsageByValue?.[subjectToDelete.value] ?? 0
+    if (usageCount > 0) {
+      toast.error(
+        `Cannot delete "${subjectToDelete.label}" because it is assigned to ${usageCount} topic${usageCount === 1 ? "" : "s"}.`,
+      )
+      return
+    }
+
     onSubjectsChange(subjects.filter((s) => s.id !== id))
   }
 

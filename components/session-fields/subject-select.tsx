@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Book, Check, ChevronDown } from "lucide-react"
 
-import { TagManager } from "@/components/log-session/tag-manager"
+import { SubjectTagManager } from "@/components/log-session/subject-tag-manager"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -25,6 +25,7 @@ import type { TagItem } from "@/types/tag"
 interface SubjectSelectProps {
   subjects: TagItem[]
   hashtags: TagItem[]
+  subjectUsageByValue?: Record<string, number>
   value: string
   onChange: (value: string) => void
   onSubjectsChange: (subjects: TagItem[]) => void
@@ -36,6 +37,7 @@ interface SubjectSelectProps {
 export function SubjectSelect({
   subjects,
   hashtags,
+  subjectUsageByValue,
   value,
   onChange,
   onSubjectsChange,
@@ -83,9 +85,10 @@ export function SubjectSelect({
           <div className="flex items-center">
             <CommandInput placeholder="Search subject..." className="flex-1" />
             <div className="flex h-9 items-center border-b pr-1">
-              <TagManager
+              <SubjectTagManager
                 subjects={subjects}
                 hashtags={hashtags}
+                subjectUsageByValue={subjectUsageByValue}
                 onSubjectsChange={onSubjectsChange}
                 onHashtagsChange={onHashtagsChange}
                 initialTab="subjects"
