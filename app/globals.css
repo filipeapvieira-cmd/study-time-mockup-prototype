@@ -160,8 +160,13 @@
   }
 
   .analytics-activity-calendar .analytics-activity-calendar__day--out-of-range {
-    background-color: var(--background);
-    opacity: 0.55;
+    background-color: color-mix(in oklch, var(--muted) 55%, var(--background));
+    color: color-mix(in oklch, var(--foreground) 70%, var(--muted-foreground));
+  }
+
+  .analytics-activity-calendar .rbc-off-range,
+  .analytics-activity-calendar .rbc-off-range .rbc-button-link {
+    color: color-mix(in oklch, var(--foreground) 70%, var(--muted-foreground));
   }
 
   .analytics-activity-calendar .analytics-activity-calendar__event,

@@ -175,8 +175,10 @@ export function StudyActivityCalendar({
         return {
           className: "analytics-activity-calendar__day--out-of-range",
           style: {
-            backgroundColor: "var(--background)",
-            opacity: 0.55,
+            backgroundColor:
+              "color-mix(in oklch, var(--muted) 55%, var(--background))",
+            color:
+              "color-mix(in oklch, var(--foreground) 70%, var(--muted-foreground))",
           },
         }
       }
@@ -326,10 +328,11 @@ export function StudyActivityCalendar({
                                       color: "var(--muted-foreground)",
                                     }
                                   : {
-                                      backgroundColor: "var(--background)",
+                                      backgroundColor:
+                                        "color-mix(in oklch, var(--muted) 55%, var(--background))",
                                       borderColor: "var(--border)",
-                                      color: "var(--muted-foreground)",
-                                      opacity: 0.55,
+                                      color:
+                                        "color-mix(in oklch, var(--foreground) 70%, var(--muted-foreground))",
                                     }
                           }
                         >

@@ -327,7 +327,12 @@ export default function AnalyticsPage() {
                   stroke="none"
                 >
                   {subjectData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.fill}
+                      aria-label={`${entry.name}: ${entry.value}% of total topic time`}
+                      title={`${entry.name}: ${entry.value}%`}
+                    />
                   ))}
                 </Pie>
                 <ChartTooltip
