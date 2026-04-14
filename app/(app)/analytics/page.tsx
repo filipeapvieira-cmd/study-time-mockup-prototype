@@ -530,17 +530,21 @@ export default function AnalyticsPage() {
       </div>
 
       {showAiInsights ? (
-        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 items-start gap-4 xl:items-stretch xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+          <div className="order-2 min-w-0 xl:order-1 xl:col-start-1">
+            <div className="flex min-w-0 flex-col gap-4">
+              {timeDistributionCard}
+              {subjectMasteryCard}
+              {startHourFocusCard}
+            </div>
+          </div>
           <div className="order-1 min-w-0 xl:order-2 xl:col-start-2">
             <AIInsightPanel
               insightsResult={insightsResult}
-              className="xl:sticky xl:top-6"
+              className="xl:h-full"
             />
           </div>
-          <div className="order-2 min-w-0 flex flex-col gap-4 xl:order-1 xl:col-start-1">
-            {timeDistributionCard}
-            {subjectMasteryCard}
-            {startHourFocusCard}
+          <div className="order-3 min-w-0 xl:col-span-2">
             {studyActivityCalendarCard}
           </div>
         </div>

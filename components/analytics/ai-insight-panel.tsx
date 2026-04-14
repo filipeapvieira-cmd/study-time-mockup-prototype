@@ -116,7 +116,7 @@ export function AIInsightPanel({ insightsResult, className }: AIInsightPanelProp
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
         {!insightsResult.hasData ? (
           <Empty className="min-h-[280px]">
             <EmptyHeader>
@@ -130,7 +130,7 @@ export function AIInsightPanel({ insightsResult, className }: AIInsightPanelProp
             </EmptyHeader>
           </Empty>
         ) : (
-          <ScrollArea className="h-[540px] pr-3 xl:h-[calc(100svh-240px)]">
+          <ScrollArea className="h-[540px] pr-3 xl:h-full">
             <Accordion type="multiple" defaultValue={accordionDefaultValues} className="w-full">
               {insightsResult.insights.map((insight) => {
                 const Icon = getCategoryIcon(insight.category)
