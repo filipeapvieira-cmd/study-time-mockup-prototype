@@ -197,8 +197,7 @@ export function StudyActivityCalendar({
         return {
           className: "analytics-activity-calendar__day--active",
           style: {
-            backgroundColor:
-              "color-mix(in oklch, var(--chart-2) 16%, var(--background))",
+            backgroundColor: "var(--analytics-activity)",
           },
         }
       }
@@ -217,8 +216,8 @@ export function StudyActivityCalendar({
     return {
       className: "analytics-activity-calendar__event",
       style: {
-        backgroundColor: "var(--chart-2)",
-        borderColor: "var(--chart-2)",
+        backgroundColor: "var(--analytics-activity)",
+        borderColor: "var(--analytics-activity)",
         color: "transparent",
       },
     }
@@ -272,8 +271,8 @@ export function StudyActivityCalendar({
               aria-hidden
               className="size-3 rounded-[3px] border"
               style={{
-                backgroundColor: "var(--chart-2)",
-                borderColor: "var(--chart-2)",
+                backgroundColor: "var(--analytics-activity)",
+                borderColor: "var(--analytics-activity)",
               }}
             />
             Active
@@ -316,12 +315,12 @@ export function StudyActivityCalendar({
                                   borderColor: "transparent",
                                   color: "transparent",
                                 }
-                              : cell.isActive
-                                ? {
-                                    backgroundColor: "var(--chart-2)",
-                                    borderColor: "var(--chart-2)",
-                                    color: "var(--background)",
-                                  }
+                                : cell.isActive
+                                  ? {
+                                      backgroundColor: "var(--analytics-activity)",
+                                      borderColor: "var(--analytics-activity)",
+                                      color: "var(--background)",
+                                    }
                                 : cell.inRange
                                   ? {
                                       backgroundColor: "var(--muted)",
