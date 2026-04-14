@@ -84,7 +84,7 @@ export function AppSidebar() {
             {isMobile && (
               <SidebarMenuButton size="lg" asChild>
                 <Link href="/dashboard">
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                     <GraduationCap className="size-4" />
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
@@ -102,7 +102,7 @@ export function AppSidebar() {
               <div className="flex items-center gap-2">
                 <SidebarMenuButton size="lg" asChild className="flex-1">
                   <Link href="/">
-                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                       <GraduationCap className="size-4" />
                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight">
@@ -136,7 +136,7 @@ export function AppSidebar() {
                 onBlur={() => setIsHovered(false)}
                 aria-label="Open sidebar"
                 title="Open sidebar"
-                className="relative flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground transition-all hover:bg-sidebar-primary/90"
+                className="relative flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-all hover:bg-primary/90"
               >
                 <GraduationCap 
                   className={`size-4 absolute transition-opacity duration-150 ${isHovered ? 'opacity-0' : 'opacity-100'}`} 
