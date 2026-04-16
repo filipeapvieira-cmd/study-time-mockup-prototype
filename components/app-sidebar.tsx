@@ -44,6 +44,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { SessionPanel } from "@/components/log-session/session-panel"
+import { SessionTimerShellPanel } from "@/components/log-session/session-timer-shell-panel"
 
 const navItems = [
   {
@@ -74,6 +75,8 @@ export function AppSidebar() {
   const { isMobile, open, toggleSidebar } = useSidebar()
   const [isHovered, setIsHovered] = useState(false)
   const isDarkMode = resolvedTheme === "dark"
+  const isLogSessionPage = pathname === "/log-session"
+  const isLogSessionConceptsPage = pathname === "/log-session-concepts"
 
   return (
     <Sidebar collapsible="icon">
@@ -171,13 +174,13 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Session Panel - only shown on Log Session page */}
-        {pathname === "/log-session" && (
+        {/* Session panel variants for log session routes */}
+        {(isLogSessionPage || isLogSessionConceptsPage) && (
           <>
             <SidebarSeparator className="mx-0 group-data-[collapsible=icon]:hidden" />
             <SidebarGroup className="flex-1 group-data-[collapsible=icon]:hidden">
               <SidebarGroupContent className="h-full">
-                <SessionPanel />
+                {isLogSessionPage ? <SessionPanel /> : <SessionTimerShellPanel />}
               </SidebarGroupContent>
             </SidebarGroup>
           </>
