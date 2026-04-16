@@ -191,7 +191,10 @@ export default function LogSessionPage() {
                 <DropdownMenuContent align="start" className="w-56">
                   <DropdownMenuGroup>
                     <DropdownMenuItem
-                      onClick={() => actions.toggleTopicTimer(activeTopic.id)}
+                      onSelect={(event) => {
+                        event.preventDefault()
+                        actions.toggleTopicTimer(activeTopic.id)
+                      }}
                       disabled={!isSessionPlaying}
                     >
                       {activeTopic.isRunning ? (
