@@ -1,7 +1,15 @@
 "use client"
 
 import React from "react"
-import { MessageSquareText } from "lucide-react"
+import {
+  ChevronDownIcon,
+  ListTree,
+  MessageSquareText,
+  Pause,
+  Play,
+  Plus,
+  Trash2,
+} from "lucide-react"
 
 import { useLogSessionDraft } from "@/components/log-session/log-session-draft-provider"
 import { AIQuestionsSheet } from "@/components/log-session/ai-questions-sheet"
@@ -9,7 +17,23 @@ import { HashtagMultiSelect } from "@/components/session-fields/hashtag-multi-se
 import { SessionReflectionField } from "@/components/session-fields/session-reflection-field"
 import { SubjectSelect } from "@/components/session-fields/subject-select"
 import { Button } from "@/components/ui/button"
-import { getActiveTopicViewModel } from "@/lib/log-session-draft"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { getActiveTopicViewModel, getTopicLabel } from "@/lib/log-session-draft"
 import {
   cloneReflection,
   createReflectionFromText,
@@ -57,6 +81,34 @@ export default function LogSessionPage() {
     () => reflectionToPlainText(reflection),
     [reflection],
   )
+  const isSessionPlaying = state.sessionStatus === "playing"
+
+  const topicItems = React.useMemo(
+    () =>
+      state.topicOrder
+        .map((topicId, index) => {
+          const topic = state.topicsById[topicId]
+          if (!topic) {
+            return null
+          }
+
+          return {
+            id: topicId,
+            label: getTopicLabel(topic, { subjects: state.subjects }, index + 1),
+          }
+        })
+        .filter((topic): topic is { id: string; label: string } => Boolean(topic)),
+    [state.subjects, state.topicOrder, state.topicsById],
+  )
+
+  const formatTime = React.useCallback((seconds: number) => {
+    const hrs = Math.floor(seconds / 3600)
+    const mins = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+    return `${hrs.toString().padStart(2, "0")}:${mins
+      .toString()
+      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+  }, [])
 
   React.useEffect(() => {
     if (!focusRequestVersion) {
@@ -124,7 +176,80 @@ export default function LogSessionPage() {
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-6 md:px-10 md:py-8">
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10 shrink-0 rounded-md"
+                    aria-label="Topic actions"
+                  >
+                    <ChevronDownIcon className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      onClick={() => actions.toggleTopicTimer(activeTopic.id)}
+                      disabled={!isSessionPlaying}
+                    >
+                      {activeTopic.isRunning ? (
+                        <Pause className="size-4" />
+                      ) : (
+                        <Play className="size-4" />
+                      )}
+                      {activeTopic.isRunning ? "Pause Counter" : "Start Counter"}
+                      <DropdownMenuShortcut className="font-mono tabular-nums">
+                        {formatTime(activeTopic.durationSeconds)}
+                      </DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuLabel>Topic Actions</DropdownMenuLabel>
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem onClick={actions.addTopic}>
+                      <Plus className="size-4" />
+                      Create New Topic
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <ListTree className="size-4" />
+                        Select Topic
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuPortal>
+                        <DropdownMenuSubContent className="w-44">
+                          <DropdownMenuRadioGroup
+                            value={activeTopic.id}
+                            onValueChange={actions.selectTopic}
+                          >
+                            {topicItems.map((topic) => (
+                              <DropdownMenuRadioItem key={topic.id} value={topic.id}>
+                                {topic.label}
+                              </DropdownMenuRadioItem>
+                            ))}
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuPortal>
+                    </DropdownMenuSub>
+                  </DropdownMenuGroup>
+
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => actions.deleteTopic(activeTopic.id)}
+                    disabled={state.topicOrder.length === 1}
+                  >
+                    <Trash2 className="size-4" />
+                    Delete Topic
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <SubjectSelect
                 subjects={state.subjects}
                 hashtags={state.hashtags}
@@ -133,6 +258,7 @@ export default function LogSessionPage() {
                 onChange={actions.updateActiveTopicSubject}
                 onSubjectsChange={actions.updateSubjects}
                 onHashtagsChange={actions.updateHashtags}
+                className="flex-1"
               />
             </div>
 
@@ -150,7 +276,7 @@ export default function LogSessionPage() {
           </div>
         </div>
 
-        <div ref={reflectionFieldRef} className="mt-8 flex flex-1 flex-col">
+        <div ref={reflectionFieldRef} className="mt-6 flex flex-1 flex-col">
           <SessionReflectionField
             key={activeTopic.id}
             value={reflection}

@@ -49,7 +49,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { SESSION_TIMER_LABEL, TOPIC_LABEL } from "@/lib/session-labels"
+import { SESSION_TIMER_LABEL } from "@/lib/session-labels"
 import {
   cloneTagItems,
   getTagItemByValue,
@@ -565,36 +565,12 @@ export function SessionEditorSheet({
               <FieldGroup className="gap-4">
                 <Field>
                   <FieldTitle className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-                    {TOPIC_LABEL}
+                    Topic Timing
                   </FieldTitle>
                   <FieldContent className="gap-3">
-                    <div className="w-full">
-                      <Select
-                        value={selectedTopicId || undefined}
-                        onValueChange={handleTopicSelect}
-                        disabled={isTopicEditable || topics.length === 0}
-                      >
-                        <SelectTrigger className="h-9 w-full" aria-label={`Select ${TOPIC_LABEL.toLowerCase()}`}>
-                          <SelectValue placeholder={`Select a ${TOPIC_LABEL.toLowerCase()}...`} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {topics.map((topic) => (
-                            <SelectItem key={topic.id} value={topic.id}>
-                              <div className="flex min-w-0 items-center gap-2">
-                                <span className="truncate">{topic.subjectLabel}</span>
-                                <span className="font-mono text-xs text-muted-foreground">
-                                  ({formatSecondsToDuration(topic.duration)})
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       {isTopicEditable ? (
-                        <InputGroup aria-label={`${TOPIC_LABEL} duration`} className="w-full sm:max-w-sm">
+                        <InputGroup aria-label="Topic duration" className="w-full sm:max-w-sm">
                           <InputGroupInput
                             type="number"
                             min={0}
@@ -676,39 +652,72 @@ export function SessionEditorSheet({
                             </Button>
                           </>
                         ) : (
-                          <>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="size-9"
-                              onClick={startEditTopic}
-                              disabled={!selectedTopic}
-                              aria-label="Edit topic"
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="size-9 text-destructive hover:text-destructive"
-                              onClick={deleteTopic}
-                              disabled={!selectedTopic || topics.length <= 1}
-                              aria-label="Delete topic"
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="size-9"
-                              onClick={startAddTopic}
-                              aria-label="Add topic"
-                            >
-                              <Plus className="size-4" />
-                            </Button>
-                          </>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-9"
+                            onClick={startEditTopic}
+                            disabled={!selectedTopic}
+                            aria-label="Edit topic duration"
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
                         )}
                       </div>
+                    </div>
+                  </FieldContent>
+                </Field>
+
+                <Field>
+                  <FieldTitle className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+                    Topic Management
+                  </FieldTitle>
+                  <FieldContent className="gap-3">
+                    <div className="w-full">
+                      <Select
+                        value={selectedTopicId || undefined}
+                        onValueChange={handleTopicSelect}
+                        disabled={isTopicEditable || topics.length === 0}
+                      >
+                        <SelectTrigger className="h-9 w-full" aria-label="Select topic">
+                          <SelectValue placeholder="Select a topic..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {topics.map((topic) => (
+                            <SelectItem key={topic.id} value={topic.id}>
+                              <div className="flex min-w-0 items-center gap-2">
+                                <span className="truncate">{topic.subjectLabel}</span>
+                                <span className="font-mono text-xs text-muted-foreground">
+                                  ({formatSecondsToDuration(topic.duration)})
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-9 text-destructive hover:text-destructive"
+                        onClick={deleteTopic}
+                        disabled={isTopicEditable || !selectedTopic || topics.length <= 1}
+                        aria-label="Delete topic"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="size-9"
+                        onClick={startAddTopic}
+                        disabled={isTopicEditable}
+                        aria-label="Add topic"
+                      >
+                        <Plus className="size-4" />
+                      </Button>
                     </div>
                   </FieldContent>
                 </Field>
