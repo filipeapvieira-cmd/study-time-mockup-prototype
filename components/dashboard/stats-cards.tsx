@@ -45,7 +45,7 @@ export function StatsCards({ className }: { className?: string }) {
       {stats.map((stat) => (
         <Card key={stat.title} className="h-full gap-3 py-5">
           <CardHeader className="flex flex-row items-center justify-between pb-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-base font-medium text-muted-foreground">
               {stat.title}
             </CardTitle>
             <stat.icon className="size-4 text-muted-foreground" />
