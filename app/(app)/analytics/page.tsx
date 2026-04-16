@@ -32,6 +32,7 @@ import {
 import { parseAiJsonResponse } from "@/lib/ai/client"
 import { analyticsInsightsResponseSchema } from "@/lib/ai/contracts"
 import { buildAnalyticsInsightsRequest } from "@/lib/analytics-ai-evidence"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { TEMP_STUDY_SESSIONS } from "@/lib/session-dummy-data"
 
 type AnalyticsPeriod = "week" | "month" | "year"
@@ -88,6 +89,7 @@ function formatStartHourLabel(hour: number): string {
 }
 
 export default function AnalyticsPage() {
+  const isMobile = useIsMobile()
   const [period, setPeriod] = React.useState<AnalyticsPeriod>("month")
   const [showAiInsights, setShowAiInsights] = React.useState(false)
   const [aiInsightState, setAiInsightState] =
@@ -490,7 +492,10 @@ export default function AnalyticsPage() {
         {startHourData.length > 0 ? (
           <div className="h-[180px] w-full">
             <ChartContainer config={startHourChartConfig} className="h-full w-full">
-              <AreaChart data={startHourData} accessibilityLayer>
+              <AreaChart
+                data={startHourData}
+                accessibilityLayer
+              >
                 <defs>
                   <linearGradient id="startHourGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop
@@ -511,9 +516,25 @@ export default function AnalyticsPage() {
                   axisLine={false}
                   tickMargin={8}
                   fontSize={12}
-                  interval={0}
+                  interval={isMobile ? "preserveStartEnd" : 0}
+                  minTickGap={isMobile ? 28 : 8}
                 />
-                <YAxis hide />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickCount={4}
+                  width={36}
+                  domain={[0, "auto"]}
+                  tickFormatter={(value) => {
+                    const numericValue =
+                      typeof value === "number" ? value : Number(value)
+                    return Number.isFinite(numericValue)
+                      ? `${formatHours(numericValue)}h`
+                      : String(value)
+                  }}
+                  fontSize={12}
+                />
                 <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
                 <Area
                   type="monotone"
