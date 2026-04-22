@@ -797,6 +797,118 @@ const BASE_SAMPLE_SESSIONS: SampleSessionConfig[] = [
     createdAt: "2026-03-18T13:00:00Z",
     updatedAt: "2026-03-18T14:07:00Z",
   },
+  {
+    id: "11",
+    date: "2026-03-16",
+    startTime: "08:30",
+    endTime: "11:00",
+    pauseTime: 0,
+    effectiveTime: 9000,
+    topics: [
+      {
+        id: "t16",
+        duration: 5400,
+        subject: "history",
+        hashtags: ["timeline", "source-critique"],
+        reflection:
+          "Reviewed two historical timelines and compared source strength before consolidating notes.",
+      },
+      {
+        id: "t17",
+        duration: 3600,
+        subject: "history",
+        hashtags: ["causality", "timeline"],
+        reflection:
+          "Mapped a cause-and-effect chain and validated whether event ordering remained consistent.",
+      },
+    ],
+    createdAt: "2026-03-16T08:30:00Z",
+    updatedAt: "2026-03-16T11:00:00Z",
+  },
+  {
+    id: "12",
+    date: "2026-03-14",
+    startTime: "09:10",
+    endTime: "11:40",
+    pauseTime: 0,
+    effectiveTime: 9000,
+    topics: [
+      {
+        id: "t18",
+        duration: 4800,
+        subject: "history",
+        hashtags: ["source-critique", "causality"],
+        reflection:
+          "Cross-checked primary and secondary materials and noted where causal claims were overextended.",
+      },
+      {
+        id: "t19",
+        duration: 4200,
+        subject: "history",
+        hashtags: ["timeline", "causality"],
+        reflection:
+          "Reconstructed a timeline from archival notes and aligned each turning point with evidence.",
+      },
+    ],
+    createdAt: "2026-03-14T09:10:00Z",
+    updatedAt: "2026-03-14T11:40:00Z",
+  },
+  {
+    id: "13",
+    date: "2026-03-12",
+    startTime: "13:00",
+    endTime: "15:30",
+    pauseTime: 0,
+    effectiveTime: 9000,
+    topics: [
+      {
+        id: "t20",
+        duration: 5100,
+        subject: "history",
+        hashtags: ["timeline", "source-critique"],
+        reflection:
+          "Compared narrative timelines across authors and documented where sourcing diverged.",
+      },
+      {
+        id: "t21",
+        duration: 3900,
+        subject: "history",
+        hashtags: ["source-critique", "causality"],
+        reflection:
+          "Assessed competing interpretations and retained only claims supported by explicit citations.",
+      },
+    ],
+    createdAt: "2026-03-12T13:00:00Z",
+    updatedAt: "2026-03-12T15:30:00Z",
+  },
+  {
+    id: "14",
+    date: "2026-03-10",
+    startTime: "10:15",
+    endTime: "12:45",
+    pauseTime: 0,
+    effectiveTime: 9000,
+    topics: [
+      {
+        id: "t22",
+        duration: 4500,
+        subject: "history",
+        hashtags: ["timeline", "causality"],
+        reflection:
+          "Built a chronological outline of policy shifts and annotated key causal dependencies.",
+      },
+      {
+        id: "t23",
+        duration: 4500,
+        subject: "history",
+        hashtags: ["source-critique", "timeline"],
+        reflection:
+          "Evaluated source reliability for each milestone and recorded unresolved evidence gaps.",
+      },
+    ],
+    createdAt: "2026-03-10T10:15:00Z",
+    updatedAt: "2026-03-10T12:45:00Z",
+  },
 ]
 
 const generatedSeedSessionId = BASE_SAMPLE_SESSIONS.length + 1
