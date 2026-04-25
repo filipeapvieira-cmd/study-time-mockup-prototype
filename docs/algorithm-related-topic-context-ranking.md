@@ -1,3 +1,11 @@
+/**
+ * Lecturer note:
+ * Main application URL: https://study-time-mockup-prototype.vercel.app/
+ * Page where this algorithm's work can be observed from a user perspective:
+ * https://study-time-mockup-prototype.vercel.app/log-session
+ * On that page, click "AI Prompts" in the bottom-right corner.
+ */
+
 # Related Topic Context Ranking Algorithm
 
 ## Purpose in the Product

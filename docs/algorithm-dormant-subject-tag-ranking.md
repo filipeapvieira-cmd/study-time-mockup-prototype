@@ -1,3 +1,11 @@
+/**
+ * Lecturer note:
+ * Main application URL: https://study-time-mockup-prototype.vercel.app/
+ * Page where this algorithm's work can be observed from a user perspective:
+ * https://study-time-mockup-prototype.vercel.app/analytics
+ * On that page, click "AI Insights" in the top-right corner.
+ */
+
 # Dormant Subject and Tag Ranking Algorithm
 
 ## Purpose in the Product
